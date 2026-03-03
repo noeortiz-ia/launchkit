@@ -6,7 +6,7 @@ const options = {
   path: '/api/v1/models',
   method: 'GET',
   headers: {
-    'Authorization': 'Bearer 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'
+    'Authorization': 'Bearer YOUR_OPENROUTER_KEY_HERE'
   }
 };
 
