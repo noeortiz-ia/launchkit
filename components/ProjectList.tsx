@@ -25,8 +25,11 @@ const ProjectList: React.FC = () => {
   };
 
   if (projects === undefined) {
+      console.log("[DEBUG] ProjectList - projects is undefined (loading)");
       return <div className="p-10 text-center text-textSec">Cargando proyectos...</div>;
   }
+
+  console.log("[DEBUG] ProjectList - projects loaded, count:", projects.length);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">

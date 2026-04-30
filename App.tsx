@@ -11,6 +11,7 @@ import { useConvexAuth } from "convex/react";
 
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  console.log("[DEBUG] App RequireAuth - isLoading:", isLoading, "isAuthenticated:", isAuthenticated);
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-white">Cargando...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
@@ -18,6 +19,7 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
 
 const RedirectIfAuth = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  console.log("[DEBUG] App RedirectIfAuth - isLoading:", isLoading, "isAuthenticated:", isAuthenticated);
   if (isLoading) return null;
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
