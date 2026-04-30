@@ -28,7 +28,11 @@ const ResendProvider = {
         text: `Inicia sesión en LaunchKit: ${url}`,
       }),
     });
-    if (!res.ok) throw new Error("Resend failed: " + (await res.text()));
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Resend API Error:", errorText);
+      throw new Error("Resend failed: " + errorText);
+    }
   },
 };
 
