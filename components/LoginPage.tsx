@@ -11,11 +11,15 @@ const LoginPage: React.FC = () => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
+        console.log("[DEBUG] VITE_CONVEX_URL:", import.meta.env.VITE_CONVEX_URL);
+        console.log("[DEBUG] Iniciando sesión para:", email);
+        
         try {
             await signIn("resend", { email });
+            console.log("[DEBUG] ¡Éxito! Enlace enviado.");
             setStep('sent');
         } catch (error) {
-            console.error(error);
+            console.error("[DEBUG] Error detallado al iniciar sesión:", error);
             alert("Error al enviar el correo. Por favor intenta de nuevo.");
             setSubmitting(false);
         }
