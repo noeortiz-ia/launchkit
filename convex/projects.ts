@@ -1,17 +1,28 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { auth } from "./auth";
 
 export const getProjects = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("projects").order("desc").collect();
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return [];
+    return await ctx.db
+      .query("projects")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
   },
 });
 
 export const getProject = query({
   args: { id: v.id("projects") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const userId = await auth.getUserId(ctx);
+    if (!userId) return null;
+    const project = await ctx.db.get(args.id);
+    if (!project || project.userId !== userId) return null;
+    return project;
   },
 });
 
@@ -40,7 +51,11 @@ export const createProject = mutation({
     savedItems: v.optional(v.array(planItemValidator)),
   },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("No autenticado");
+    
     const projectId = await ctx.db.insert("projects", {
+      userId,
       name: args.name,
       description: args.description,
       targetAudience: args.targetAudience,
@@ -67,6 +82,14 @@ export const updateProject = mutation({
     problemSolved: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("No autenticado");
+
+    const existing = await ctx.db.get(args.id);
+    if (!existing || existing.userId !== userId) {
+        throw new Error("No autorizado");
+    }
+
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
   },
@@ -75,6 +98,14 @@ export const updateProject = mutation({
 export const deleteProject = mutation({
   args: { id: v.id("projects") },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) throw new Error("No autenticado");
+
+    const existing = await ctx.db.get(args.id);
+    if (!existing || existing.userId !== userId) {
+        throw new Error("No autorizado");
+    }
+
     await ctx.db.delete(args.id);
   },
 });

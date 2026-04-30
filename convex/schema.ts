@@ -5,6 +5,7 @@ import { v } from "convex/values";
 export default defineSchema({
   ...authTables,
   projects: defineTable({
+    userId: v.id("users"), // Associated user
     name: v.string(),
     description: v.string(),
     targetAudience: v.string(),
@@ -59,5 +60,5 @@ export default defineSchema({
         }),
       })
     ),
-  }),
+  }).index("by_user", ["userId"]),
 });

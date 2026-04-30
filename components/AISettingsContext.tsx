@@ -21,9 +21,9 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const AISettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // Basic settings state
-    const [apiKey, setApiKey] = useState<string>('');
-    const [textModel, setTextModel] = useState<string>('google/gemini-2.5-flash');
-    const [imageModel, setImageModel] = useState<string>('google/gemini-2.5-flash-preview-image-generation'); // Optional default image model
+    const [apiKey, setApiKey] = useState<string>(import.meta.env.VITE_OPENROUTER_API_KEY || '');
+    const [textModel, setTextModel] = useState<string>('google/gemini-2.0-flash-001');
+    const [imageModel, setImageModel] = useState<string>('google/gemini-2.0-flash-001'); // Optional default image model
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     
     // Models cache state
@@ -37,6 +37,8 @@ export const AISettingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             try {
                 const parsed = JSON.parse(savedSettings);
                 if (parsed.apiKey) setApiKey(parsed.apiKey);
+                else if (import.meta.env.VITE_OPENROUTER_API_KEY) setApiKey(import.meta.env.VITE_OPENROUTER_API_KEY);
+                
                 if (parsed.textModel) setTextModel(parsed.textModel);
                 if (parsed.imageModel) setImageModel(parsed.imageModel);
             } catch (e) {
