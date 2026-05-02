@@ -187,7 +187,22 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                                 </button>
                             </div>
                             <div className="p-5 text-sm text-textMain whitespace-pre-wrap leading-relaxed">
-                                {typeof content[key] === 'string' ? content[key] : JSON.stringify(content[key], null, 2)}
+                                {typeof content[key] === 'string' ? (
+                                    content[key]
+                                ) : (
+                                    <div className="space-y-4">
+                                        {Object.entries(content[key]).map(([subKey, subValue]) => (
+                                            <div key={subKey}>
+                                                <span className="text-[10px] font-bold text-accent uppercase tracking-widest block mb-1">
+                                                    {subKey === 'subject' || subKey === 'asunto' ? t('ASUNTO', 'SUBJECT') : subKey.toUpperCase()}
+                                                </span>
+                                                <div className={subKey === 'subject' || subKey === 'asunto' ? 'font-bold text-base' : ''}>
+                                                    {String(subValue)}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

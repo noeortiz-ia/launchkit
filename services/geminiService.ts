@@ -327,9 +327,13 @@ const getLaunchKitPrompt = (type: LaunchKitType, project: Project, language: str
     switch (type) {
         case 'emails':
             return `Generate 3 marketing emails for launch. ${baseInfo}
-            Write subject and body. ${langNote}
+            ${langNote}
             Respond ONLY with JSON (DO NOT translate keys):
-            { "teaser": "text", "lanzamiento": "text", "recordatorio": "text" }`;
+            { 
+              "teaser": { "subject": "text", "body": "text" }, 
+              "lanzamiento": { "subject": "text", "body": "text" }, 
+              "recordatorio": { "subject": "text", "body": "text" } 
+            }`;
         case 'productHunt':
             return `Generate Product Hunt copy. ${baseInfo} ${langNote}
             Respond ONLY with JSON (DO NOT translate keys):
