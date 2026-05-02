@@ -22,6 +22,7 @@ export interface ContentItem {
   status: ContentStatus;
   copy?: string;
   imageUrl?: string;
+  imageUrls?: string[];
 }
 
 // Estructuras para el Kit de Lanzamiento

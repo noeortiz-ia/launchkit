@@ -110,11 +110,11 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
     }
     setLoadingImage(true);
     try {
+      // Use current UI language for the image prompt
       const base64Image = await generateImage(item, project, aspectRatio, { apiKey, textModel, imageModel }, imageLanguage);
       
       if (base64Image) {
         const uploadUrl = await generateUploadUrl();
-        
         const blobResponse = await fetch(base64Image);
         const blob = await blobResponse.blob();
         
@@ -130,7 +130,12 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
         const imageUrl = await getPublicUrl({ storageId });
 
         if (imageUrl) {
-          onUpdateItem({ ...item, imageUrl });
+          const currentUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : []);
+          onUpdateItem({ 
+            ...item, 
+            imageUrls: [...currentUrls, imageUrl],
+            imageUrl: imageUrl // Keep as main for list view
+          });
         } else {
           alert(t('No se pudo obtener la URL de la imagen', 'Could not obtain image URL'));
         }
@@ -143,6 +148,16 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
     } finally {
       setLoadingImage(false);
     }
+  };
+
+  const handleDeleteImage = (urlToDelete: string) => {
+    const currentUrls = item.imageUrls || (item.imageUrl ? [item.imageUrl] : []);
+    const updatedUrls = currentUrls.filter(url => url !== urlToDelete);
+    onUpdateItem({ 
+        ...item, 
+        imageUrls: updatedUrls,
+        imageUrl: updatedUrls[0] || undefined
+    });
   };
 
   const handleCopyClipboard = () => {
@@ -288,73 +303,107 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
               )}
           </div>
 
-          {/* IMAGE GENERATION */}
+          {/* IMAGE GENERATION SECTION */}
           {item.copy && (
-              <div className="border-t border-border pt-5">
-                  <h3 className="text-textMain font-bold text-sm mb-3">{t('Recurso Visual', 'Visual Asset')}</h3>
+              <div className="border-t border-border pt-5 pb-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-textMain font-bold text-sm">{t('Recursos Visuales', 'Visual Assets')}</h3>
+                    <span className="text-[10px] text-textSec font-medium">
+                        {(item.imageUrls?.length || (item.imageUrl ? 1 : 0))} {t('imágenes', 'images')}
+                    </span>
+                  </div>
                   
-                  {item.imageUrl ? (
-                      <div className="space-y-2 animate-fadeIn">
-                          <div className="rounded-lg overflow-hidden border border-border bg-background relative flex justify-center">
-                              <img src={item.imageUrl} alt="Generated Asset" className="max-w-full h-auto object-contain max-h-80" />
-                          </div>
-                          <div className="flex justify-between text-[10px] text-textSec">
-                               <span>{t('Imagen generada con IA', 'AI-generated image')}</span>
-                               <button onClick={() => window.open(item.imageUrl)} className="hover:text-accent">{t('Abrir original', 'Open original')}</button>
-                          </div>
-                      </div>
-                  ) : (
-                      <div className="bg-background rounded-lg p-4 border border-border">
-                          <div className="flex gap-6 mb-4">
-                              <div className="flex-1">
-                                  <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Formato (Aspect Ratio)', 'Format (Aspect Ratio)')}</label>
-                                  <div className="flex flex-wrap gap-2">
-                                    {ratioOptions.map((option) => (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => setAspectRatio(option.value)}
-                                            className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
-                                                aspectRatio === option.value 
-                                                ? 'bg-textMain border-textMain text-background shadow-lg shadow-textMain/10' 
-                                                : 'bg-surface border-border text-textSec hover:border-textSec hover:text-textMain'
-                                            }`}
-                                        >
-                                            {option.label}
-                                        </button>
-                                    ))}
-                                  </div>
-                              </div>
-                              <div>
-                                  <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Idioma del Texto', 'Text Language')}</label>
-                                  <div className="flex bg-surface border border-border rounded-full p-1">
-                                      <button 
-                                          onClick={() => setImageLanguage('es')}
-                                          className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${imageLanguage === 'es' ? 'bg-textMain text-background' : 'text-textSec hover:text-textMain'}`}
-                                      >
-                                          ES
-                                      </button>
-                                      <button 
-                                          onClick={() => setImageLanguage('en')}
-                                          className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${imageLanguage === 'en' ? 'bg-textMain text-background' : 'text-textSec hover:text-textMain'}`}
-                                      >
-                                          EN
-                                      </button>
-                                  </div>
+                  {/* Gallery Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                      {(item.imageUrls || (item.imageUrl ? [item.imageUrl] : [])).map((url, idx) => (
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-border bg-background aspect-square flex items-center justify-center">
+                              <img src={url} alt={`Asset ${idx + 1}`} className="w-full h-full object-cover cursor-zoom-in" onClick={() => window.open(url)} />
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteImage(url); }}
+                                className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                                title={t('Eliminar', 'Delete')}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[8px] py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  #{idx + 1}
                               </div>
                           </div>
-                          <button 
-                              onClick={handleGenerateImage}
-                              disabled={loadingImage}
-                              className="w-full py-2.5 bg-surface border border-border text-textMain rounded-lg hover:bg-surfaceHover font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-                          >
-                              {loadingImage ? (
-                                  <span className="text-xs">{t('Generando...', 'Generating...')}</span>
-                              ) : (
-                                  <><ImageIcon className="w-4 h-4" /> {t('Generar Imagen', 'Generate Image')}</>
-                              )}
-                          </button>
+                      ))}
+                      
+                      {/* Generation Slot (If space available or always for more) */}
+                      <div className="bg-surface/50 border border-dashed border-border rounded-lg p-4 flex flex-col items-center justify-center gap-2 aspect-square">
+                          {loadingImage ? (
+                               <div className="flex flex-col items-center gap-2">
+                                   <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                                   <span className="text-[10px] text-textSec">{t('Generando...', 'Generating...')}</span>
+                               </div>
+                          ) : (
+                               <button 
+                                   onClick={handleGenerateImage}
+                                   className="flex flex-col items-center gap-2 text-textSec hover:text-accent transition-colors"
+                               >
+                                   <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center">
+                                       <ImageIcon className="w-4 h-4" />
+                                   </div>
+                                   <span className="text-[10px] font-medium">{t('Generar Otra', 'Generate Another')}</span>
+                               </button>
+                          )}
                       </div>
-                  )}
+                  </div>
+
+                  {/* Configuration for Next Generation */}
+                  <div className="bg-background rounded-xl p-4 border border-border">
+                      <div className="flex gap-6 mb-4">
+                          <div className="flex-1">
+                              <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Formato de Próxima Imagen', 'Next Image Format')}</label>
+                              <div className="flex flex-wrap gap-2">
+                                {ratioOptions.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => setAspectRatio(option.value)}
+                                        className={`px-3 py-1 text-[10px] rounded-full border transition-all ${
+                                            aspectRatio === option.value 
+                                            ? 'bg-textMain border-textMain text-background' 
+                                            : 'bg-surface border-border text-textSec hover:border-textSec hover:text-textMain'
+                                        }`}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                              </div>
+                          </div>
+                          <div>
+                              <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Idioma', 'Language')}</label>
+                              <div className="flex bg-surface border border-border rounded-full p-0.5">
+                                  <button 
+                                      onClick={() => setImageLanguage('es')}
+                                      className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full transition-all ${imageLanguage === 'es' ? 'bg-textMain text-background' : 'text-textSec hover:text-textMain'}`}
+                                  >
+                                      ES
+                                  </button>
+                                  <button 
+                                      onClick={() => setImageLanguage('en')}
+                                      className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full transition-all ${imageLanguage === 'en' ? 'bg-textMain text-background' : 'text-textSec hover:text-textMain'}`}
+                                  >
+                                      EN
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <button 
+                          onClick={handleGenerateImage}
+                          disabled={loadingImage}
+                          className="w-full py-2.5 bg-textMain text-background rounded-lg hover:opacity-90 font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs"
+                      >
+                          {loadingImage ? (
+                              t('Generando recurso...', 'Generating asset...')
+                          ) : (
+                              <><Wand2 className="w-3.5 h-3.5" /> {t('Generar Versión / Diapositiva', 'Generate Version / Slide')}</>
+                          )}
+                      </button>
+                  </div>
               </div>
           )}
         </div>
