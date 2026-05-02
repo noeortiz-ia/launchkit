@@ -309,13 +309,16 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-textMain font-bold text-sm">{t('Recursos Visuales', 'Visual Assets')}</h3>
                     <span className="text-[10px] text-textSec font-medium">
-                        {(item.imageUrls?.length || (item.imageUrl ? 1 : 0))} {t('imágenes', 'images')}
+                        {((item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls.length : (item.imageUrl ? 1 : 0))} {t('imágenes', 'images')}
                     </span>
                   </div>
                   
                   {/* Gallery Grid */}
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                      {((item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : [])).map((url, idx) => (
+                      {((item.imageUrls && item.imageUrls.length > 0) 
+                        ? item.imageUrls 
+                        : (item.imageUrl ? [item.imageUrl] : [])
+                      ).map((url, idx) => (
                           <div key={idx} className="relative group rounded-lg overflow-hidden border border-border bg-background aspect-square flex items-center justify-center">
                               <img src={url} alt={`Asset ${idx + 1}`} className="w-full h-full object-cover cursor-zoom-in" onClick={() => window.open(url)} />
                               <button 
