@@ -257,9 +257,11 @@ export const refineCopy = async (currentCopy: string, instruction: string, confi
 };
 
 // 5. Generate Image (OpenRouter Flux 2)
-export const generateImage = async (item: ContentItem, project: Project, aspectRatio: string, config: AIConfig) => {
+export const generateImage = async (item: ContentItem, project: Project, aspectRatio: string, config: AIConfig, language: string = 'es') => {
+  const isEn = language === 'en';
   const prompt = `Attractive marketing image for a project named "${project.name}". 
   Context: ${item.title}. Angle: ${item.angle}. 
+  ${isEn ? 'All text in the image must be in ENGLISH.' : 'Cualquier texto dentro de la imagen debe estar en ESPAÑOL.'}
   Aspect Ratio: ${aspectRatio}`; 
 
   const API_KEY = config.apiKey;

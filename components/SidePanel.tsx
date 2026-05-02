@@ -24,8 +24,15 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
   const [copied, setCopied] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('16:9');
 
+  const [imageLanguage, setImageLanguage] = useState<string>(language);
+
   const { apiKey, textModel, imageModel, openSettings } = useAISettings();
-  const { language, t } = useLanguage();
+  const { language: uiLanguage, t } = useLanguage();
+
+  // Update image language if UI language changes and we haven't touched it
+  useEffect(() => {
+    setImageLanguage(uiLanguage);
+  }, [uiLanguage]);
 
   const generateUploadUrl = useMutation(api.images.generateUploadUrl);
   const getPublicUrl = useMutation(api.images.getPublicUrl);
@@ -65,7 +72,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
     }
     setLoadingCopy(true);
     try {
-      const copy = await generateCopy(item, project, { apiKey, textModel, imageModel }, language);
+      const copy = await generateCopy(item, project, { apiKey, textModel, imageModel }, uiLanguage);
       onUpdateItem({ ...item, copy, status: ContentStatus.GENERATED });
     } catch (e) {
       console.error(e);
@@ -84,7 +91,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
     }
     setLoadingRefine(true);
     try {
-      const newCopy = await refineCopy(item.copy, refineInput, { apiKey, textModel, imageModel }, language);
+      const newCopy = await refineCopy(item.copy, refineInput, { apiKey, textModel, imageModel }, uiLanguage);
       onUpdateItem({ ...item, copy: newCopy });
       setRefineInput('');
     } catch (e: any) {
@@ -101,22 +108,16 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
       openSettings();
       return;
     }
-    console.log("Starting image generation...");
     setLoadingImage(true);
     try {
-      console.log("Calling OpenRouter...");
-      const base64Image = await generateImage(item, project, aspectRatio, { apiKey, textModel, imageModel });
+      const base64Image = await generateImage(item, project, aspectRatio, { apiKey, textModel, imageModel }, imageLanguage);
       
       if (base64Image) {
-        console.log("Image generated, requesting Convex upload URL...");
         const uploadUrl = await generateUploadUrl();
-        console.log("Upload URL received:", uploadUrl);
         
-        console.log("Converting to blob...");
         const blobResponse = await fetch(base64Image);
         const blob = await blobResponse.blob();
         
-        console.log("Uploading to Convex Storage...");
         const uploadResult = await fetch(uploadUrl, {
           method: "POST",
           headers: { "Content-Type": blob.type },
@@ -126,11 +127,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
         if (!uploadResult.ok) throw new Error("Failed to upload image to Convex");
 
         const { storageId } = await uploadResult.json();
-        console.log("Upload successful, storageId:", storageId);
-        
-        console.log("Resolving public URL...");
         const imageUrl = await getPublicUrl({ storageId });
-        console.log("Public URL resolved:", imageUrl);
 
         if (imageUrl) {
           onUpdateItem({ ...item, imageUrl });
@@ -144,7 +141,6 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
       console.error("Error in handleGenerateImage:", e);
       alert(e.message || t('Error generando o subiendo la imagen', 'Error generating or uploading image'));
     } finally {
-      console.log("Image generation process finished.");
       setLoadingImage(false);
     }
   };
@@ -309,22 +305,41 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                       </div>
                   ) : (
                       <div className="bg-background rounded-lg p-4 border border-border">
-                          <div className="mb-4">
-                              <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Formato (Aspect Ratio)', 'Format (Aspect Ratio)')}</label>
-                              <div className="flex flex-wrap gap-2">
-                                {ratioOptions.map((option) => (
-                                    <button
-                                        key={option.value}
-                                        onClick={() => setAspectRatio(option.value)}
-                                        className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
-                                            aspectRatio === option.value 
-                                            ? 'bg-textMain border-textMain text-background shadow-lg shadow-textMain/10' 
-                                            : 'bg-surface border-border text-textSec hover:border-textSec hover:text-textMain'
-                                        }`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
+                          <div className="flex gap-6 mb-4">
+                              <div className="flex-1">
+                                  <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Formato (Aspect Ratio)', 'Format (Aspect Ratio)')}</label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {ratioOptions.map((option) => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => setAspectRatio(option.value)}
+                                            className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
+                                                aspectRatio === option.value 
+                                                ? 'bg-textMain border-textMain text-background shadow-lg shadow-textMain/10' 
+                                                : 'bg-surface border-border text-textSec hover:border-textSec hover:text-textMain'
+                                            }`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                  </div>
+                              </div>
+                              <div>
+                                  <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Idioma del Texto', 'Text Language')}</label>
+                                  <div className="flex bg-surface border border-border rounded-full p-1">
+                                      <button 
+                                          onClick={() => setImageLanguage('es')}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${imageLanguage === 'es' ? 'bg-textMain text-background' : 'text-textSec hover:text-textMain'}`}
+                                      >
+                                          ES
+                                      </button>
+                                      <button 
+                                          onClick={() => setImageLanguage('en')}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${imageLanguage === 'en' ? 'bg-textMain text-background' : 'text-textSec hover:text-textMain'}`}
+                                      >
+                                          EN
+                                      </button>
+                                  </div>
                               </div>
                           </div>
                           <button 
