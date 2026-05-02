@@ -24,10 +24,10 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
   const [copied, setCopied] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('16:9');
 
-  const [imageLanguage, setImageLanguage] = useState<string>(language);
+  const { language: uiLanguage, t } = useLanguage();
+  const [imageLanguage, setImageLanguage] = useState<string>(uiLanguage);
 
   const { apiKey, textModel, imageModel, openSettings } = useAISettings();
-  const { language: uiLanguage, t } = useLanguage();
 
   // Update image language if UI language changes and we haven't touched it
   useEffect(() => {
