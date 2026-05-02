@@ -40,6 +40,7 @@ export default defineSchema({
           status: v.string(),
           copy: v.optional(v.string()),
           imageUrl: v.optional(v.string()),
+          imageUrls: v.optional(v.array(v.string())),
         })
       )
     ),
