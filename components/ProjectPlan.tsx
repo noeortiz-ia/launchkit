@@ -66,14 +66,20 @@ const ProjectPlan: React.FC = () => {
       ...rawProject,
       id: rawProject._id,
       createdAt: rawProject._creationTime,
-      plan: (rawProject.plan || []).map((item: any) => ({
-          ...item,
-          imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : [])
-      })) as ContentItem[],
-      savedItems: (rawProject.savedItems || []).map((item: any) => ({
-          ...item,
-          imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : [])
-      })) as ContentItem[],
+      plan: (rawProject.plan || []).map((item: any) => {
+          const hasImageUrls = item.imageUrls && item.imageUrls.length > 0;
+          return {
+              ...item,
+              imageUrls: hasImageUrls ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : [])
+          };
+      }) as ContentItem[],
+      savedItems: (rawProject.savedItems || []).map((item: any) => {
+          const hasImageUrls = item.imageUrls && item.imageUrls.length > 0;
+          return {
+              ...item,
+              imageUrls: hasImageUrls ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : [])
+          };
+      }) as ContentItem[],
       launchKit: rawProject.launchKit ? {
           emails: { status: rawProject.launchKit.emails.status as ContentStatus, content: rawProject.launchKit.emails.content },
           productHunt: { status: rawProject.launchKit.productHunt.status as ContentStatus, content: rawProject.launchKit.productHunt.content },

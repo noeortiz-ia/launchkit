@@ -315,7 +315,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                   
                   {/* Gallery Grid */}
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                      {(item.imageUrls || (item.imageUrl ? [item.imageUrl] : [])).map((url, idx) => (
+                      {((item.imageUrls && item.imageUrls.length > 0) ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : [])).map((url, idx) => (
                           <div key={idx} className="relative group rounded-lg overflow-hidden border border-border bg-background aspect-square flex items-center justify-center">
                               <img src={url} alt={`Asset ${idx + 1}`} className="w-full h-full object-cover cursor-zoom-in" onClick={() => window.open(url)} />
                               <button 
