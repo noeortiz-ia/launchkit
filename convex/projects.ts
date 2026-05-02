@@ -37,6 +37,7 @@ const planItemValidator = v.object({
   status: v.string(),
   copy: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
+  imageUrls: v.optional(v.array(v.string())),
 });
 
 export const createProject = mutation({
