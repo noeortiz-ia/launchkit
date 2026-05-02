@@ -5,6 +5,7 @@ import { X, Wand2, Check, Copy, Zap, Image as ImageIcon, Save, CheckCircle } fro
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useAISettings } from './AISettingsContext';
+import { useLanguage } from './LanguageContext';
 
 interface SidePanelProps {
   item: ContentItem | null;
@@ -24,6 +25,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
   const [aspectRatio, setAspectRatio] = useState('16:9');
 
   const { apiKey, textModel, imageModel, openSettings } = useAISettings();
+  const { language, t } = useLanguage();
 
   const generateUploadUrl = useMutation(api.images.generateUploadUrl);
   const getPublicUrl = useMutation(api.images.getPublicUrl);
@@ -57,17 +59,17 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
 
   const handleGenerateCopy = async () => {
     if (!apiKey) {
-      alert("Debes configurar la API Key primero en Ajustes (⚙️)");
+      alert(t("Debes configurar la API Key primero en Ajustes (⚙️)", "You must configure the API Key first in Settings (⚙️)"));
       openSettings();
       return;
     }
     setLoadingCopy(true);
     try {
-      const copy = await generateCopy(item, project, { apiKey, textModel, imageModel });
+      const copy = await generateCopy(item, project, { apiKey, textModel, imageModel }, language);
       onUpdateItem({ ...item, copy, status: ContentStatus.GENERATED });
     } catch (e) {
       console.error(e);
-      alert('Error generando copy');
+      alert(t('Error generando copy', 'Error generating copy'));
     } finally {
       setLoadingCopy(false);
     }
@@ -76,18 +78,18 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
   const handleRefineCopy = async () => {
     if (!item.copy || !refineInput.trim()) return;
     if (!apiKey) {
-      alert("Debes configurar la API Key primero en Ajustes (⚙️)");
+      alert(t("Debes configurar la API Key primero en Ajustes (⚙️)", "You must configure the API Key first in Settings (⚙️)"));
       openSettings();
       return;
     }
     setLoadingRefine(true);
     try {
-      const newCopy = await refineCopy(item.copy, refineInput, { apiKey, textModel, imageModel });
+      const newCopy = await refineCopy(item.copy, refineInput, { apiKey, textModel, imageModel }, language);
       onUpdateItem({ ...item, copy: newCopy });
       setRefineInput('');
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Error refinando copy');
+      alert(e.message || t('Error refinando copy', 'Error refining copy'));
     } finally {
       setLoadingRefine(false);
     }
@@ -95,7 +97,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
 
   const handleGenerateImage = async () => {
     if (!apiKey) {
-      alert("Debes configurar la API Key primero en Ajustes (⚙️)");
+      alert(t("Debes configurar la API Key primero en Ajustes (⚙️)", "You must configure the API Key first in Settings (⚙️)"));
       openSettings();
       return;
     }
@@ -133,14 +135,14 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
         if (imageUrl) {
           onUpdateItem({ ...item, imageUrl });
         } else {
-          alert('No se pudo obtener la URL de la imagen');
+          alert(t('No se pudo obtener la URL de la imagen', 'Could not obtain image URL'));
         }
       } else {
-        alert('No se pudo generar la imagen');
+        alert(t('No se pudo generar la imagen', 'Could not generate image'));
       }
     } catch (e: any) {
       console.error("Error in handleGenerateImage:", e);
-      alert(e.message || 'Error generando o subiendo la imagen');
+      alert(e.message || t('Error generando o subiendo la imagen', 'Error generating or uploading image'));
     } finally {
       console.log("Image generation process finished.");
       setLoadingImage(false);
@@ -202,7 +204,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
           {/* Context Info */}
           <div className="space-y-3">
             <div className="bg-background p-4 rounded-lg border border-border">
-              <span className="text-textSec text-xs uppercase font-bold block mb-1">Ángulo Estratégico</span>
+              <span className="text-textSec text-xs uppercase font-bold block mb-1">{t('Ángulo Estratégico', 'Strategic Angle')}</span>
               <p className="text-textMain text-sm leading-relaxed">{item.angle}</p>
             </div>
 
@@ -210,7 +212,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
               <div className="bg-amber-900/20 p-4 rounded-lg border border-amber-900/50 flex gap-3">
                 <Zap className="w-5 h-5 text-accentAmber fill-accentAmber flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-accentAmber text-xs uppercase font-bold block mb-1">Tendencia Detectada</span>
+                  <span className="text-accentAmber text-xs uppercase font-bold block mb-1">{t('Tendencia Detectada', 'Trend Detected')}</span>
                   <p className="text-textMain text-sm leading-relaxed">{item.trendContext}</p>
                 </div>
               </div>
@@ -220,10 +222,10 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
           {/* COPY GENERATION */}
           <div>
               <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-textMain font-bold text-sm">Contenido de Texto</h3>
+                  <h3 className="text-textMain font-bold text-sm">{t('Contenido de Texto', 'Text Content')}</h3>
                   <div className="flex gap-2">
-                    {item.status === ContentStatus.GENERATED && <span className="text-success text-[10px] font-bold bg-success/10 px-2 py-0.5 rounded-full border border-success/20">GENERADO</span>}
-                    {item.status === ContentStatus.USED && <span className="text-textSec text-[10px] font-bold bg-surfaceHover px-2 py-0.5 rounded-full border border-border">PUBLICADO</span>}
+                    {item.status === ContentStatus.GENERATED && <span className="text-success text-[10px] font-bold bg-success/10 px-2 py-0.5 rounded-full border border-success/20">{t('GENERADO', 'GENERATED')}</span>}
+                    {item.status === ContentStatus.USED && <span className="text-textSec text-[10px] font-bold bg-surfaceHover px-2 py-0.5 rounded-full border border-border">{t('PUBLICADO', 'PUBLISHED')}</span>}
                   </div>
               </div>
 
@@ -236,10 +238,10 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                       {loadingCopy ? (
                            <>
                            <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin"></div>
-                           Escribiendo con IA...
+                           {t('Escribiendo con IA...', 'Writing with AI...')}
                            </>
                       ) : (
-                          <><Wand2 className="w-4 h-4" /> Redactar Contenido con IA</>
+                          <><Wand2 className="w-4 h-4" /> {t('Redactar Contenido con IA', 'Write Content with AI')}</>
                       )}
                   </button>
               ) : (
@@ -253,7 +255,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                           <button 
                               onClick={handleCopyClipboard}
                               className="absolute top-2 right-2 p-1.5 bg-surface border border-border rounded text-textSec hover:text-accent hover:border-accent transition-all shadow-sm"
-                              title="Copiar texto"
+                              title={t("Copiar texto", "Copy text")}
                           >
                               {copied ? 
                                   <Check className="w-4 h-4 text-success" /> :
@@ -267,7 +269,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                           <textarea 
                               value={refineInput}
                               onChange={(e) => setRefineInput(e.target.value)}
-                              placeholder="Instrucción para mejorar (ej: 'Hazlo más divertido', 'Tradúcelo al inglés')..."
+                              placeholder={t("Instrucción para mejorar (ej: 'Hazlo más divertido', 'Tradúcelo al inglés')...", "Improvement instruction (e.g. 'Make it funnier', 'Translate to English')...")}
                               className="flex-1 bg-background border border-border rounded-lg px-3 py-3 text-sm text-textMain focus:outline-none focus:border-accent placeholder-textSec/50 resize-none h-20"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -283,7 +285,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                           >
                               {loadingRefine ? (
                                 <div className="w-4 h-4 border-2 border-textSec border-t-transparent rounded-full animate-spin"></div>
-                              ) : 'Mejorar'}
+                              ) : t('Mejorar', 'Improve')}
                           </button>
                       </div>
                   </div>
@@ -293,7 +295,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
           {/* IMAGE GENERATION */}
           {item.copy && (
               <div className="border-t border-border pt-5">
-                  <h3 className="text-textMain font-bold text-sm mb-3">Recurso Visual</h3>
+                  <h3 className="text-textMain font-bold text-sm mb-3">{t('Recurso Visual', 'Visual Asset')}</h3>
                   
                   {item.imageUrl ? (
                       <div className="space-y-2 animate-fadeIn">
@@ -301,14 +303,14 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                               <img src={item.imageUrl} alt="Generated Asset" className="max-w-full h-auto object-contain max-h-80" />
                           </div>
                           <div className="flex justify-between text-[10px] text-textSec">
-                               <span>Imagen generada con IA</span>
-                               <button onClick={() => window.open(item.imageUrl)} className="hover:text-accent">Abrir original</button>
+                               <span>{t('Imagen generada con IA', 'AI-generated image')}</span>
+                               <button onClick={() => window.open(item.imageUrl)} className="hover:text-accent">{t('Abrir original', 'Open original')}</button>
                           </div>
                       </div>
                   ) : (
                       <div className="bg-background rounded-lg p-4 border border-border">
                           <div className="mb-4">
-                              <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">Formato (Aspect Ratio)</label>
+                              <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Formato (Aspect Ratio)', 'Format (Aspect Ratio)')}</label>
                               <div className="flex flex-wrap gap-2">
                                 {ratioOptions.map((option) => (
                                     <button
@@ -331,9 +333,9 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                               className="w-full py-2.5 bg-surface border border-border text-textMain rounded-lg hover:bg-surfaceHover font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
                           >
                               {loadingImage ? (
-                                  <span className="text-xs">Generando...</span>
+                                  <span className="text-xs">{t('Generando...', 'Generating...')}</span>
                               ) : (
-                                  <><ImageIcon className="w-4 h-4" /> Generar Imagen</>
+                                  <><ImageIcon className="w-4 h-4" /> {t('Generar Imagen', 'Generate Image')}</>
                               )}
                           </button>
                       </div>
@@ -348,18 +350,18 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                 onClick={() => onSaveItem(item)}
                 className="py-3 border border-border bg-surface hover:bg-surfaceHover text-textMain rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
             >
-                <Save className="w-4 h-4" /> Guardar
+                <Save className="w-4 h-4" /> {t('Guardar', 'Save')}
             </button>
             {item.status !== ContentStatus.USED ? (
                <button 
                 onClick={markAsUsed}
                 className="py-3 border border-success/30 bg-success/10 text-success hover:bg-success/20 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2"
                >
-                 <CheckCircle className="w-4 h-4" /> Completar
+                 <CheckCircle className="w-4 h-4" /> {t('Completar', 'Complete')}
                </button>
              ) : (
                  <div className="text-center text-success font-medium text-sm py-3 rounded-lg border border-success/20 bg-success/5 flex items-center justify-center gap-2">
-                     <CheckCircle className="w-4 h-4" /> Completado
+                     <CheckCircle className="w-4 h-4" /> {t('Completado', 'Completed')}
                  </div>
              )}
         </div>

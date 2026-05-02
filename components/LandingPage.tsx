@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Rocket, Sparkles, ArrowRight, ExternalLink } from 'lucide-react';
+import { useLanguage } from './LanguageContext';
 
 const LandingPage: React.FC = () => {
     const navigate = useNavigate();
+    const { t } = useLanguage();
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-[#f5f5f5] font-sans selection:bg-blue-500 selection:text-white overflow-hidden flex flex-col">
@@ -23,7 +25,7 @@ const LandingPage: React.FC = () => {
                     onClick={() => navigate('/login')}
                     className="text-sm font-medium text-[#a3a3a3] hover:text-white transition-colors border border-transparent hover:border-[#262626] rounded-lg px-4 py-2"
                 >
-                    Acceder
+                    {t('Acceder', 'Access')}
                 </button>
             </nav>
 
@@ -33,15 +35,15 @@ const LandingPage: React.FC = () => {
 
                     
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.1] text-balance">
-                        Tu plan de contenido,
+                        {t('Tu plan de contenido,', 'Your content plan,')}
                         <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 relative pb-2">
-                            generado con IA
+                            {t('generado con IA', 'generated with AI')}
                             <div className="absolute inset-x-0 bottom-0 h-20 bg-blue-500/20 blur-2xl -z-10 translate-y-10"></div>
                         </span>
                     </h1>
                     
                     <p className="text-lg md:text-xl text-[#a3a3a3] max-w-2xl mx-auto leading-relaxed pt-4 text-balance">
-                        Describe tu producto y LaunchKit crea un plan de 4 semanas con ideas para X, LinkedIn, Instagram y email. Conectado a tendencias reales.
+                        {t('Describe tu producto y LaunchKit crea un plan de 4 semanas con ideas para X, LinkedIn, Instagram y email. Conectado a tendencias reales.', 'Describe your product and LaunchKit creates a 4-week plan with ideas for X, LinkedIn, Instagram, and email. Connected to real trends.')}
                     </p>
 
                     <div className="flex flex-col items-center gap-6 pt-8">
@@ -49,18 +51,18 @@ const LandingPage: React.FC = () => {
                             onClick={() => navigate('/login')}
                             className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium text-lg transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] flex items-center gap-2 transform hover:-translate-y-1"
                         >
-                            Comenzar ahora <ArrowRight className="w-5 h-5" />
+                            {t('Comenzar ahora', 'Get started now')} <ArrowRight className="w-5 h-5" />
                         </button>
                         
                         <div className="text-sm text-[#525252] flex flex-col md:flex-row items-center gap-1 md:gap-2">
-                            <span>Exclusivo para miembros de la academia.</span>
+                            <span>{t('Exclusivo para miembros de la academia.', 'Exclusive for academy members.')}</span>
                             <a 
                                 href="https://www.skool.com/vibe-coding-crea-apps-con-ia-5930" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-[#a3a3a3] hover:text-blue-400 inline-flex items-center gap-1 transition-colors border-b border-[#a3a3a3]/30 hover:border-blue-400"
                             >
-                                Únete acá <ExternalLink className="w-3 h-3" />
+                                {t('Únete acá', 'Join here')} <ExternalLink className="w-3 h-3" />
                             </a>
                         </div>
                     </div>
@@ -69,7 +71,7 @@ const LandingPage: React.FC = () => {
 
             {/* Footer */}
             <footer className="py-8 text-center text-xs text-[#404040] relative z-10">
-                <p>LaunchKit Beta · Hecho por Rodrigo Olivares · Exclusivo para miembros</p>
+                <p>{t('LaunchKit Beta · Hecho por Rodrigo Olivares · Exclusivo para miembros', 'LaunchKit Beta · Built by Rodrigo Olivares · Exclusive for members')}</p>
             </footer>
         </div>
     );

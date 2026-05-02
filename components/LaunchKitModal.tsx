@@ -3,6 +3,7 @@ import { Project, LaunchKitType, ContentStatus } from '../types';
 import { generateLaunchKitContent, refineLaunchKitContent } from '../services/geminiService';
 import { Mail, Rocket, FolderOpen, X, Wand2, Check, CheckCircle } from 'lucide-react';
 import { useAISettings } from './AISettingsContext';
+import { useLanguage } from './LanguageContext';
 
 interface LaunchKitModalProps {
   type: LaunchKitType;
@@ -19,14 +20,15 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const { apiKey, textModel, imageModel, openSettings } = useAISettings();
+  const { language, t } = useLanguage();
 
   if (!isOpen) return null;
 
   const getTitle = () => {
     switch(type) {
-        case 'emails': return 'Emails de Lanzamiento';
-        case 'productHunt': return 'Kit Product Hunt';
-        case 'directories': return 'Directorios';
+        case 'emails': return t('Emails de Lanzamiento', 'Launch Emails');
+        case 'productHunt': return t('Kit Product Hunt', 'Product Hunt Kit');
+        case 'directories': return t('Directorios', 'Directories');
     }
   };
 
@@ -55,13 +57,13 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
 
   const handleGenerate = async () => {
       if (!apiKey) {
-          alert("Por favor, configura tu API Key de OpenRouter antes de generar.");
+          alert(t("Por favor, configura tu API Key de OpenRouter antes de generar.", "Please configure your OpenRouter API Key before generating."));
           openSettings();
           return;
       }
       setLoading(true);
       try {
-          const generatedContent = await generateLaunchKitContent(type, project, { apiKey, textModel, imageModel });
+          const generatedContent = await generateLaunchKitContent(type, project, { apiKey, textModel, imageModel }, language);
           const updatedProject = {
               ...project,
               launchKit: {
@@ -75,7 +77,7 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
           onUpdateProject(updatedProject);
       } catch (e) {
           console.error(e);
-          alert("Error generando contenido.");
+          alert(t("Error generando contenido.", "Error generating content."));
       } finally {
           setLoading(false);
       }
@@ -84,13 +86,13 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
   const handleRefine = async () => {
       if (!refineInput.trim()) return;
       if (!apiKey) {
-          alert("Por favor, configura tu API Key de OpenRouter primero.");
+          alert(t("Por favor, configura tu API Key de OpenRouter primero.", "Please configure your OpenRouter API Key first."));
           openSettings();
           return;
       }
       setRefining(true);
       try {
-          const refinedContent = await refineLaunchKitContent(type, content, refineInput, { apiKey, textModel, imageModel });
+          const refinedContent = await refineLaunchKitContent(type, content, refineInput, { apiKey, textModel, imageModel }, language);
           const updatedProject = {
               ...project,
               launchKit: {
@@ -105,7 +107,7 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
           setRefineInput('');
       } catch (e) {
           console.error(e);
-          alert("Error refinando contenido.");
+          alert(t("Error refinando contenido.", "Error refining content."));
       } finally {
           setRefining(false);
       }
@@ -161,14 +163,14 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                     {getLargeIcon()}
                     <p className="text-textSec mb-6 max-w-sm">
-                        Genera los textos esenciales para esta categoría. LaunchKit creará varias opciones listas para usar.
+                        {t('Genera los textos esenciales para esta categoría. LaunchKit creará varias opciones listas para usar.', 'Generate the essential texts for this category. LaunchKit will create several ready-to-use options.')}
                     </p>
                     <button 
                         onClick={handleGenerate}
                         disabled={loading}
                         className="bg-textMain hover:opacity-90 text-background px-6 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2"
                     >
-                        {loading ? 'Generando...' : <><Wand2 className="w-4 h-4" /> Generar Textos</>}
+                        {loading ? t('Generando...', 'Generating...') : <><Wand2 className="w-4 h-4" /> {t('Generar Textos', 'Generate Texts')}</>}
                     </button>
                 </div>
             ) : (
@@ -181,7 +183,7 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                                     onClick={() => handleCopy(content[key], key)}
                                     className="text-xs text-accent hover:text-white transition-colors font-medium flex items-center gap-1"
                                 >
-                                    {copiedKey === key ? <><Check className="w-3 h-3" /> ¡Copiado!</> : 'Copiar'}
+                                    {copiedKey === key ? <><Check className="w-3 h-3" /> {t('¡Copiado!', 'Copied!')}</> : t('Copiar', 'Copy')}
                                 </button>
                             </div>
                             <div className="p-5 text-sm text-textMain whitespace-pre-wrap leading-relaxed">
@@ -192,11 +194,11 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                     
                     {/* Refine Section */}
                     <div className="pt-6 border-t border-border">
-                        <label className="text-xs font-bold text-textSec uppercase mb-3 block">Refinar Resultados</label>
+                        <label className="text-xs font-bold text-textSec uppercase mb-3 block">{t('Refinar Resultados', 'Refine Results')}</label>
                         <div className="flex gap-3 items-start">
                             <textarea
                                 className="flex-1 bg-background border border-border rounded-lg px-4 py-3 text-sm text-textMain focus:outline-none focus:border-accent resize-none h-24"
-                                placeholder="Ej: Haz el tono más divertido, o acorta los textos..."
+                                placeholder={t("Ej: Haz el tono más divertido, o acorta los textos...", "E.g.: Make the tone funnier, or shorten the texts...")}
                                 value={refineInput}
                                 onChange={e => setRefineInput(e.target.value)}
                                 onKeyDown={e => {
@@ -211,7 +213,7 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                                 disabled={refining || !refineInput.trim()}
                                 className="h-24 bg-surfaceHover border border-border text-textMain px-5 rounded-lg text-sm font-medium hover:bg-border transition-colors disabled:opacity-50 flex items-center justify-center"
                             >
-                                {refining ? '...' : 'Refinar'}
+                                {refining ? '...' : t('Refinar', 'Refine')}
                             </button>
                         </div>
                     </div>
@@ -227,11 +229,11 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                         onClick={markAsUsed}
                         className="bg-success/10 text-success border border-success/30 px-4 py-2 rounded-lg font-bold text-sm hover:bg-success/20 transition-colors flex items-center gap-2"
                     >
-                        <CheckCircle className="w-4 h-4" /> Marcar como Usado
+                        <CheckCircle className="w-4 h-4" /> {t('Marcar como Usado', 'Mark as Used')}
                     </button>
                 ) : (
                     <span className="text-success font-medium text-sm flex items-center px-4 gap-2">
-                        <CheckCircle className="w-4 h-4" /> Completado
+                        <CheckCircle className="w-4 h-4" /> {t('Completado', 'Completed')}
                     </span>
                 )}
             </div>

@@ -5,6 +5,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { ThemeProvider } from './components/ThemeContext';
 import { AISettingsProvider } from './components/AISettingsContext';
+import { LanguageProvider } from './components/LanguageContext';
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -17,11 +18,13 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ConvexAuthProvider client={convex}>
-      <ThemeProvider>
-        <AISettingsProvider>
-          <App />
-        </AISettingsProvider>
-      </ThemeProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <AISettingsProvider>
+            <App />
+          </AISettingsProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </ConvexAuthProvider>
   </React.StrictMode>
 );

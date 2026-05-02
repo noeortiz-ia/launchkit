@@ -8,24 +8,26 @@ import { api } from "../convex/_generated/api";
 import { ArrowRight, Trash2, Settings } from 'lucide-react';
 import { Id } from "../convex/_generated/dataModel";
 import { useAISettings } from './AISettingsContext';
+import { useLanguage } from './LanguageContext';
 
 const ProjectList: React.FC = () => {
   const projects = useQuery(api.projects.getProjects);
   const deleteProject = useMutation(api.projects.deleteProject);
   const navigate = useNavigate();
   const { apiKey, openSettings } = useAISettings();
+  const { language, setLanguage, t } = useLanguage();
 
   const { signOut } = useAuthActions();
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm('¿Seguro que quieres eliminar este proyecto?')) {
+    if (window.confirm(t('¿Seguro que quieres eliminar este proyecto?', 'Are you sure you want to delete this project?'))) {
         await deleteProject({ id: id as Id<"projects"> });
     }
   };
 
   if (projects === undefined) {
-      return <div className="p-10 text-center text-textSec">Cargando proyectos...</div>;
+      return <div className="p-10 text-center text-textSec">{t('Cargando proyectos...', 'Loading projects...')}</div>;
   }
 
   return (
@@ -33,13 +35,30 @@ const ProjectList: React.FC = () => {
       <div className="flex justify-between items-center mb-10">
         <div>
             <h1 className="text-3xl font-bold text-textMain tracking-tight">LaunchKit</h1>
-            <p className="text-textSec mt-2">Genera un plan de contenido mensual y assets de lanzamiento.</p>
+            <p className="text-textSec mt-2">
+              {t('Genera un plan de contenido mensual y assets de lanzamiento.', 'Generate a monthly content plan and launch assets.')}
+            </p>
         </div>
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-6 items-center">
+            <div className="flex items-center gap-2 text-xs font-medium border border-border rounded-full px-3 py-1 bg-surface">
+              <button 
+                onClick={() => setLanguage('es')}
+                className={`${language === 'es' ? 'text-textMain' : 'text-textSec hover:text-textMain'} transition-colors`}
+              >
+                ES
+              </button>
+              <span className="text-border">|</span>
+              <button 
+                onClick={() => setLanguage('en')}
+                className={`${language === 'en' ? 'text-textMain' : 'text-textSec hover:text-textMain'} transition-colors`}
+              >
+                EN
+              </button>
+            </div>
             <button 
                 onClick={openSettings}
                 className="relative p-2 text-textSec hover:text-textMain hover:bg-surfaceHover rounded-md transition-colors border border-transparent hover:border-border"
-                title="Configuración de IA (BYOK)"
+                title={t('Configuración de IA (BYOK)', 'AI Settings (BYOK)')}
             >
                 <Settings className="w-5 h-5" />
                 <span className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full border border-background ${apiKey ? 'bg-success' : 'bg-red-500 animate-pulse'}`}></span>
@@ -48,13 +67,13 @@ const ProjectList: React.FC = () => {
               onClick={() => void signOut()}
               className="text-textSec hover:text-white px-4 py-2 font-medium transition-colors border border-border rounded-md hover:border-textSec"
             >
-              Cerrar Sesión
+              {t('Cerrar Sesión', 'Sign Out')}
             </button>
             <button 
               onClick={() => navigate('/create')}
               className="bg-textMain text-background px-5 py-2.5 rounded-md font-semibold hover:opacity-90 transition-all shadow-lg shadow-textMain/10"
             >
-              + Nuevo Plan
+              + {t('Nuevo Plan', 'New Plan')}
             </button>
         </div>
       </div>

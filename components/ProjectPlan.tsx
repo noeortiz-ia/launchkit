@@ -10,6 +10,7 @@ import PlanCard from './PlanCard';
 import SidePanel from './SidePanel';
 import LaunchKitModal from './LaunchKitModal';
 import { useAISettings } from './AISettingsContext';
+import { useLanguage } from './LanguageContext';
 import { 
   ArrowLeft, Star, RefreshCw, Plus, Rocket, Mail, FolderOpen, 
   ArrowRight, LayoutGrid, ListFilter
@@ -17,7 +18,7 @@ import {
 
 type ViewMode = 'PLAN' | 'SAVED';
 
-const LOADING_MESSAGES = [
+const LOADING_MESSAGES_ES = [
     "Buscando tendencias actuales...",
     "Analizando tu producto...",
     "Explorando qué se está hablando en redes...",
@@ -34,9 +35,29 @@ const LOADING_MESSAGES = [
     "Casi listo..."
 ];
 
+const LOADING_MESSAGES_EN = [
+    "Searching for current trends...",
+    "Analyzing your product...",
+    "Exploring what's trending on social media...",
+    "Identifying content opportunities...",
+    "Connecting trends with your product...",
+    "Creating ideas for X, LinkedIn, and Instagram...",
+    "Thinking about the best angles...",
+    "Defining strategy for each week...",
+    "Generating email ideas...",
+    "Organizing the plan by weeks...",
+    "Refining the ideas...",
+    "Preparing your content plan...",
+    "Last adjustments...",
+    "Almost ready..."
+];
+
 const ProjectPlan: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { language, setLanguage, t } = useLanguage();
+  
+  const LOADING_MESSAGES = language === 'es' ? LOADING_MESSAGES_ES : LOADING_MESSAGES_EN;
   
   const rawProject = useQuery(api.projects.getProject, id ? { id: id as Id<"projects"> } : "skip");
   const updateProjectMutation = useMutation(api.projects.updateProject);
@@ -92,12 +113,22 @@ const ProjectPlan: React.FC = () => {
   // Removed useEffect for loading project from localStorage
 
   const handleUpdateProject = async (updatedProject: Project) => {
-      // Cast to any to destructure potential Convex system fields that are not in Project type but exist at runtime
-      const { id, createdAt, _id, _creationTime, ...rest } = updatedProject as any;
-      await updateProjectMutation({
-          id: id as Id<"projects">,
-          ...rest
-      });
+      try {
+          // Convex mutations are strict with arguments. Only send allowed fields.
+          await updateProjectMutation({
+              id: id as Id<"projects">,
+              name: updatedProject.name,
+              description: updatedProject.description,
+              targetAudience: updatedProject.targetAudience,
+              problemSolved: updatedProject.problemSolved,
+              plan: updatedProject.plan,
+              savedItems: updatedProject.savedItems,
+              launchKit: updatedProject.launchKit
+          });
+      } catch (error: any) {
+          console.error("Error updating project:", error);
+          alert(t("Error al guardar cambios: ", "Error saving changes: ") + (error.message || "Unknown error"));
+      }
   };
 
   const handleGeneratePlan = async () => {
@@ -106,28 +137,28 @@ const ProjectPlan: React.FC = () => {
     // Confirmación si ya hay progreso
     const hasProgress = project.plan.some(i => i.status === ContentStatus.GENERATED || i.status === ContentStatus.USED);
     if (project.plan.length > 0 && hasProgress) {
-        const confirm = window.confirm("ATENCIÓN: Tienes tarjetas generadas o usadas. Si regeneras el plan, estas se perderán. Asegúrate de GUARDAR lo que quieras conservar en la sección 'Guardados'. ¿Deseas continuar y sobrescribir el plan?");
+        const confirm = window.confirm(t("ATENCIÓN: Tienes tarjetas generadas o usadas. Si regeneras el plan, estas se perderán. Asegúrate de GUARDAR lo que quieras conservar en la sección 'Guardados'. ¿Deseas continuar y sobrescribir el plan?", "ATTENTION: You have generated or used cards. If you regenerate the plan, these will be lost. Make sure to SAVE what you want to keep in the 'Saved' section. Do you want to continue and overwrite the plan?"));
         if (!confirm) return;
     } else if (project.plan.length > 0) {
-         if(!window.confirm("¿Deseas generar un nuevo plan? El plan anterior se eliminará.")) return;
+         if(!window.confirm(t("¿Deseas generar un nuevo plan? El plan anterior se eliminará.", "Do you want to generate a new plan? The previous plan will be deleted."))) return;
     }
 
     if (!apiKey) {
-        alert("LaunchKit requiere una API Key de OpenRouter. Por favor configúrala primero.");
+        alert(t("LaunchKit requiere una API Key de OpenRouter. Por favor configúrala primero.", "LaunchKit requires an OpenRouter API Key. Please configure it first."));
         openSettings();
         return;
     }
 
     setLoading(true);
     try {
-      const plan = await generateMonthlyPlan(project, useSearch, { apiKey, textModel, imageModel });
+      const plan = await generateMonthlyPlan(project, useSearch, { apiKey, textModel, imageModel }, language);
       // Mantener savedItems y launchKit, reemplazar plan
       const updatedProject = { ...project, plan };
       handleUpdateProject(updatedProject);
       setViewMode('PLAN');
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Error generando el plan.');
+      alert(e.message || t('Error generando el plan.', 'Error generating the plan.'));
     } finally {
       setLoading(false);
     }
@@ -136,13 +167,13 @@ const ProjectPlan: React.FC = () => {
   const handleAddIdea = async (week: WeekPhase) => {
     if (!project) return;
     if (!apiKey) {
-        alert("Configura tu API Key primero.");
+        alert(t("Configura tu API Key primero.", "Configure your API Key first."));
         openSettings();
         return;
     }
     setLoadingWeekId(week);
     try {
-        const newItem = await generateSingleIdea(project, week, { apiKey, textModel, imageModel });
+        const newItem = await generateSingleIdea(project, week, { apiKey, textModel, imageModel }, language);
         const updatedProject = {
             ...project,
             plan: [...project.plan, newItem]
@@ -150,15 +181,11 @@ const ProjectPlan: React.FC = () => {
         handleUpdateProject(updatedProject);
     } catch (e) {
         console.error(e);
-        alert('Error generando nueva idea.');
+        alert(t('Error generando nueva idea.', 'Error generating new idea.'));
     } finally {
-        setLoadingWeekId(null);
-    }
-  };
-
-  const handleDeleteItem = (itemId: string, isSavedItem: boolean = false) => {
+        setLoadingWeekId(null);  const handleDeleteItem = (itemId: string, isSavedItem: boolean = false) => {
     if (!project) return;
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta idea?")) {
+    if (window.confirm(t("¿Estás seguro de que quieres eliminar esta idea?", "Are you sure you want to delete this idea?"))) {
         let updatedProject: Project;
         
         if (isSavedItem) {
@@ -169,11 +196,11 @@ const ProjectPlan: React.FC = () => {
         } else {
             updatedProject = {
                 ...project,
-                plan: project.plan.filter(i => i.id !== itemId)
+                plan: (project.plan || []).filter(i => i.id !== itemId)
             };
         }
         
-        handleUpdateProject(updatedProject);
+        handleUpdateProject(updatedProject as any);
         if (selectedItemId === itemId) setSelectedItemId(null);
     }
   };
@@ -194,7 +221,7 @@ const ProjectPlan: React.FC = () => {
         updatedProject.savedItems = (project.savedItems || []).map(item => item.id === updatedItem.id ? updatedItem : item);
     }
 
-    handleUpdateProject(updatedProject);
+    handleUpdateProject(updatedProject as any);
   };
 
   const handleSaveToLibrary = (item: ContentItem) => {
@@ -202,7 +229,7 @@ const ProjectPlan: React.FC = () => {
       
       const alreadySaved = (project.savedItems || []).some(i => i.id === item.id);
       if (alreadySaved) {
-          alert("Este ítem ya está guardado.");
+          alert(t("Este ítem ya está guardado.", "This item is already saved."));
           return;
       }
 
@@ -211,21 +238,31 @@ const ProjectPlan: React.FC = () => {
           ...project,
           savedItems: [newItem, ...(project.savedItems || [])] // Prepend new item
       };
-      handleUpdateProject(updatedProject);
-      alert("¡Guardado en la librería!");
+      handleUpdateProject(updatedProject as any);
+      alert(t("¡Guardado en la librería!", "Saved to library!"));
   };
 
   const getFilteredItems = (week: WeekPhase) => {
     if (!project) return [];
+    
+    // Fallback mapping for old data consistency
+    const weekMap: Record<string, WeekPhase> = {
+        'Semana 1': WeekPhase.WEEK_1, 'Week 1': WeekPhase.WEEK_1,
+        'Semana 2': WeekPhase.WEEK_2, 'Week 2': WeekPhase.WEEK_2,
+        'Semana 3': WeekPhase.WEEK_3, 'Week 3': WeekPhase.WEEK_3,
+        'Semana 4': WeekPhase.WEEK_4, 'Week 4': WeekPhase.WEEK_4,
+    };
+
     return project.plan.filter(item => {
-      const matchesWeek = item.week === week;
+      const normalizedWeek = weekMap[item.week] || item.week;
+      const matchesWeek = normalizedWeek === week;
       const matchesFilter = filter === 'ALL' || item.status === filter;
       return matchesWeek && matchesFilter;
     });
   };
 
-  if (rawProject === undefined) return <div className="min-h-screen flex items-center justify-center bg-background text-textSec">Cargando proyecto...</div>;
-  if (!project) return <div className="min-h-screen flex items-center justify-center bg-background text-textSec">Proyecto no encontrado.</div>;
+  if (rawProject === undefined) return <div className="min-h-screen flex items-center justify-center bg-background text-textSec">{t('Cargando proyecto...', 'Loading project...')}</div>;
+  if (!project) return <div className="min-h-screen flex items-center justify-center bg-background text-textSec">{t('Proyecto no encontrado.', 'Project not found.')}</div>;
 
   const selectedItem = project.plan.find(i => i.id === selectedItemId) || (project.savedItems || []).find(i => i.id === selectedItemId) || null;
   const isModalOpen = !!selectedItem;
@@ -244,7 +281,7 @@ const ProjectPlan: React.FC = () => {
                 </div>
             </div>
             <h3 className="text-3xl font-bold text-textMain mb-4 text-center px-4 tracking-tight">
-                Generando tu Plan
+                {t('Generando tu Plan', 'Generating your Plan')}
             </h3>
             <div className="h-8 flex items-center justify-center">
                 <p key={loadingMsgIndex} className="text-accent text-lg font-medium animate-fadeIn text-center px-4">
@@ -266,7 +303,7 @@ const ProjectPlan: React.FC = () => {
                   onClick={() => navigate('/dashboard')}
                   className="text-textSec text-sm mb-2 hover:text-textMain transition-colors flex items-center gap-1 group"
                 >
-                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Mis Proyectos
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> {t('Mis Proyectos', 'My Projects')}
                 </button>
                 <div className="flex items-center gap-4">
                     <h1 className="text-3xl font-bold text-textMain">{project.name}</h1>
@@ -275,33 +312,52 @@ const ProjectPlan: React.FC = () => {
                             onClick={() => setViewMode('PLAN')}
                             className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 ${viewMode === 'PLAN' ? 'bg-textMain text-background shadow-lg' : 'text-textSec hover:text-textMain'}`}
                         >
-                            <LayoutGrid className="w-3.5 h-3.5" /> Plan Mensual
+                            <LayoutGrid className="w-3.5 h-3.5" /> {t('Plan Mensual', 'Monthly Plan')}
                         </button>
                         <button 
                             onClick={() => setViewMode('SAVED')}
                             className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 ${viewMode === 'SAVED' ? 'bg-accentAmber text-background shadow-lg' : 'text-textSec hover:text-textMain'}`}
                         >
                             <Star className={`w-3.5 h-3.5 ${viewMode === 'SAVED' ? 'fill-background' : ''}`} />
-                            Guardados ({project.savedItems?.length || 0})
+                            {t('Guardados', 'Saved')} ({project.savedItems?.length || 0})
                         </button>
                     </div>
                 </div>
                 <p className="text-textSec mt-1 text-sm max-w-2xl line-clamp-1">{project.description}</p>
               </div>
               
-              {project.plan.length > 0 && viewMode === 'PLAN' && (
-                  <div className="flex bg-surface rounded-lg p-1 border border-border self-start">
-                      {(['ALL', ContentStatus.PENDING, ContentStatus.GENERATED, ContentStatus.USED] as const).map((f) => (
-                          <button
-                              key={f}
-                              onClick={() => setFilter(f)}
-                              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${filter === f ? 'bg-surfaceHover text-textMain shadow-sm' : 'text-textSec hover:text-textMain'}`}
-                          >
-                              {f === 'ALL' ? 'Todos' : f === ContentStatus.PENDING ? 'Pendientes' : f === ContentStatus.GENERATED ? 'Generados' : 'Usados'}
-                          </button>
-                      ))}
-                  </div>
-              )}
+              <div className="flex items-center gap-4">
+                {/* Language Toggle */}
+                <div className="flex items-center gap-2 text-xs font-medium border border-border rounded-full px-3 py-1 bg-surface self-center">
+                    <button 
+                        onClick={() => setLanguage('es')}
+                        className={`${language === 'es' ? 'text-textMain' : 'text-textSec hover:text-textMain'} transition-colors`}
+                    >
+                        ES
+                    </button>
+                    <span className="text-border">|</span>
+                    <button 
+                        onClick={() => setLanguage('en')}
+                        className={`${language === 'en' ? 'text-textMain' : 'text-textSec hover:text-textMain'} transition-colors`}
+                    >
+                        EN
+                    </button>
+                </div>
+
+                {project.plan.length > 0 && viewMode === 'PLAN' && (
+                    <div className="flex bg-surface rounded-lg p-1 border border-border self-start">
+                        {(['ALL', ContentStatus.PENDING, ContentStatus.GENERATED, ContentStatus.USED] as const).map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${filter === f ? 'bg-surfaceHover text-textMain shadow-sm' : 'text-textSec hover:text-textMain'}`}
+                            >
+                                {f === 'ALL' ? t('Todos', 'All') : f === ContentStatus.PENDING ? t('Pendientes', 'Pending') : f === ContentStatus.GENERATED ? t('Generados', 'Generated') : t('Usados', 'Used')}
+                            </button>
+                        ))}
+                    </div>
+                )}
+              </div>
             </div>
         </div>
       </div>
@@ -314,24 +370,23 @@ const ProjectPlan: React.FC = () => {
                  <div className="animate-fadeIn pb-20">
                      <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold flex items-center gap-2">
-                            <Star className="text-accentAmber fill-accentAmber w-6 h-6" /> Librería de Guardados
+                            <Star className="text-accentAmber fill-accentAmber w-6 h-6" /> {t('Librería de Guardados', 'Saved Library')}
                         </h2>
                      </div>
                      {(project.savedItems || []).length === 0 ? (
                          <div className="text-center py-20 border border-dashed border-border rounded-xl bg-surface/30">
-                             <p className="text-textSec">No has guardado ninguna tarjeta todavía.</p>
+                             <p className="text-textSec">{t('No has guardado ninguna tarjeta todavía.', 'You haven\'t saved any cards yet.')}</p>
                          </div>
                      ) : (
                          <div className="flex flex-wrap gap-4">
                              {(project.savedItems || []).map(item => (
-                                 <div key={item.id} className="relative">
-                                     <PlanCard 
-                                         item={item} 
-                                         isSelected={selectedItemId === item.id}
-                                         onClick={() => setSelectedItemId(item.id)}
-                                         onDelete={() => handleDeleteItem(item.id, true)}
-                                     />
-                                 </div>
+                                  <PlanCard 
+                                      key={item.id}
+                                      item={item} 
+                                      isSelected={selectedItemId === item.id}
+                                      onClick={() => setSelectedItemId(item.id)}
+                                      onDelete={() => handleDeleteItem(item.id, true)}
+                                  />
                              ))}
                          </div>
                      )}
@@ -342,21 +397,21 @@ const ProjectPlan: React.FC = () => {
                     {project.plan.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 bg-surface/30 border border-dashed border-border rounded-xl mt-4 mb-6">
                         <Rocket className="w-16 h-16 mb-4 text-textSec opacity-50" strokeWidth={1.5} />
-                        <h2 className="text-2xl font-bold text-textMain mb-2">Plan Mensual de Contenido</h2>
+                        <h2 className="text-2xl font-bold text-textMain mb-2">{t('Plan Mensual de Contenido', 'Monthly Content Plan')}</h2>
                         <p className="text-textSec mb-6 text-center max-w-md">
-                        LaunchKit buscará tendencias y creará un calendario de 4 semanas.
+                            {t('LaunchKit buscará tendencias y creará un calendario de 4 semanas.', 'LaunchKit will search for trends and create a 4-week calendar.')}
                         </p>
                         
                         <div className="flex items-center gap-3 mb-6 bg-surface p-3 rounded-lg border border-border">
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" checked={useSearch} onChange={(e) => setUseSearch(e.target.checked)} className="sr-only peer" />
                                 <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
-                                <span className="ml-3 text-sm font-medium text-textMain">Buscar tendencias en vivo</span>
+                                <span className="ml-3 text-sm font-medium text-textMain">{t('Buscar tendencias en vivo', 'Search live trends')}</span>
                             </label>
                             <span className="text-xs text-textSec border-l border-border pl-3">
                                 {useSearch 
-                                    ? 'Usa Google Search (Gemini 3 Pro) - Más lento, conectado a la actualidad.'
-                                    : 'Sin búsqueda (Gemini 3 Flash) - Rápido, contenido estratégico y evergreen.'}
+                                    ? t('Usa Google Search (Gemini 3 Pro) - Más lento, conectado a la actualidad.', 'Uses Google Search (Gemini 3 Pro) - Slower, connected to current events.')
+                                    : t('Sin búsqueda (Gemini 3 Flash) - Rápido, contenido estratégico y evergreen.', 'No search (Gemini 3 Flash) - Fast, strategic and evergreen content.')}
                             </span>
                         </div>
 
@@ -365,7 +420,7 @@ const ProjectPlan: React.FC = () => {
                         disabled={loading}
                         className="bg-textMain hover:opacity-90 text-background px-8 py-3 rounded-lg font-semibold transition-all shadow-lg shadow-textMain/10 flex items-center gap-2 disabled:opacity-50"
                         >
-                        {loading ? 'Iniciando...' : 'Generar Plan Mensual'}
+                        {loading ? t('Iniciando...', 'Starting...') : t('Generar Plan Mensual', 'Generate Monthly Plan')}
                         </button>
                     </div>
                     ) : (
@@ -377,20 +432,28 @@ const ProjectPlan: React.FC = () => {
                                 className="text-xs text-textSec hover:text-accent transition-colors flex items-center gap-1.5"
                             >
                                 {loading ? (
-                                  <>Regenerando...</>
+                                  <>{t('Regenerando...', 'Regenerating...')}</>
                                 ) : (
-                                  <><RefreshCw className="w-3.5 h-3.5" /> Regenerar Plan Completo</>
+                                  <><RefreshCw className="w-3.5 h-3.5" /> {t('Regenerar Plan Completo', 'Regenerate Full Plan')}</>
                                 )}
                             </button>
                         </div>
                         {Object.values(WeekPhase).map((phase) => {
                             const items = getFilteredItems(phase);
                             if (items.length === 0 && filter !== 'ALL') return null;
+                            
+                            const phaseLabel = {
+                                [WeekPhase.WEEK_1]: t('Semana 1: Awareness', 'Week 1: Awareness'),
+                                [WeekPhase.WEEK_2]: t('Semana 2: Consideration', 'Week 2: Consideration'),
+                                [WeekPhase.WEEK_3]: t('Semana 3: Conversion', 'Week 3: Conversion'),
+                                [WeekPhase.WEEK_4]: t('Semana 4: Loyalty', 'Week 4: Loyalty'),
+                            }[phase];
+
                             return (
                                 <div key={phase} className="animate-fadeIn">
                                 <div className="flex items-baseline justify-between mb-4 border-b border-border/50 pb-2">
                                     <h3 className="text-xl font-semibold text-textMain flex items-center gap-3">
-                                        {phase}
+                                        {phaseLabel}
                                         <span className="text-xs font-normal text-textSec bg-surface px-2 py-0.5 rounded-full border border-border">
                                             {items.length}
                                         </span>
@@ -414,7 +477,7 @@ const ProjectPlan: React.FC = () => {
                                                   <span className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-textSec group-hover/btn:text-accent group-hover/btn:border-accent transition-colors">
                                                     <Plus className="w-5 h-5" />
                                                   </span>
-                                                  <span className="text-sm font-medium text-textSec group-hover/btn:text-textMain">Nueva idea</span>
+                                                  <span className="text-sm font-medium text-textSec group-hover/btn:text-textMain">{t('Nueva idea', 'New idea')}</span>
                                                 </>
                                                 )}
                                             </button>
@@ -432,7 +495,7 @@ const ProjectPlan: React.FC = () => {
                     {project.launchKit && (
                         <div className="border-t border-border pt-8 pb-24 animate-fadeIn">
                             <h2 className="text-2xl font-bold text-textMain mb-6 flex items-center gap-2">
-                                <Rocket className="w-6 h-6 text-accent" /> Kit de Lanzamiento
+                                <Rocket className="w-6 h-6 text-accent" /> {t('Kit de Lanzamiento', 'Launch Kit')}
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {/* Emails Block */}
@@ -444,10 +507,10 @@ const ProjectPlan: React.FC = () => {
                                         <Mail className="w-8 h-8 text-textSec" />
                                         <div className={`w-2.5 h-2.5 rounded-full ${project.launchKit.emails.status === ContentStatus.USED ? 'bg-success' : project.launchKit.emails.status === ContentStatus.GENERATED ? 'bg-accent' : 'bg-border'}`} />
                                     </div>
-                                    <h3 className="text-lg font-bold mb-2">Emails de Lanzamiento</h3>
-                                    <p className="text-sm text-textSec mb-4">Secuencia de 3 emails: Teaser, Día 0 y Recordatorio.</p>
+                                    <h3 className="text-lg font-bold mb-2">{t('Emails de Lanzamiento', 'Launch Emails')}</h3>
+                                    <p className="text-sm text-textSec mb-4">{t('Secuencia de 3 emails: Teaser, Día 0 y Recordatorio.', 'Sequence of 3 emails: Teaser, Day 0, and Reminder.')}</p>
                                     <div className="text-xs font-medium text-accent flex items-center gap-1">
-                                        {project.launchKit.emails.status === ContentStatus.PENDING ? 'Generar' : 'Ver y Copiar'} <ArrowRight className="w-3 h-3" />
+                                        {project.launchKit.emails.status === ContentStatus.PENDING ? t('Generar', 'Generate') : t('Ver y Copiar', 'View and Copy')} <ArrowRight className="w-3 h-3" />
                                     </div>
                                 </div>
 
@@ -460,10 +523,10 @@ const ProjectPlan: React.FC = () => {
                                         <Rocket className="w-8 h-8 text-textSec" />
                                         <div className={`w-2.5 h-2.5 rounded-full ${project.launchKit.productHunt.status === ContentStatus.USED ? 'bg-success' : project.launchKit.productHunt.status === ContentStatus.GENERATED ? 'bg-accent' : 'bg-border'}`} />
                                     </div>
-                                    <h3 className="text-lg font-bold mb-2">Product Hunt Assets</h3>
-                                    <p className="text-sm text-textSec mb-4">Tagline, descripción para el maker y primer comentario.</p>
+                                    <h3 className="text-lg font-bold mb-2">{t('Product Hunt Assets', 'Product Hunt Assets')}</h3>
+                                    <p className="text-sm text-textSec mb-4">{t('Tagline, descripción para el maker y primer comentario.', 'Tagline, maker description, and first comment.')}</p>
                                     <div className="text-xs font-medium text-accent flex items-center gap-1">
-                                        {project.launchKit.productHunt.status === ContentStatus.PENDING ? 'Generar' : 'Ver y Copiar'} <ArrowRight className="w-3 h-3" />
+                                        {project.launchKit.productHunt.status === ContentStatus.PENDING ? t('Generar', 'Generate') : t('Ver y Copiar', 'View and Copy')} <ArrowRight className="w-3 h-3" />
                                     </div>
                                 </div>
 
@@ -476,10 +539,10 @@ const ProjectPlan: React.FC = () => {
                                         <FolderOpen className="w-8 h-8 text-textSec" />
                                         <div className={`w-2.5 h-2.5 rounded-full ${project.launchKit.directories.status === ContentStatus.USED ? 'bg-success' : project.launchKit.directories.status === ContentStatus.GENERATED ? 'bg-accent' : 'bg-border'}`} />
                                     </div>
-                                    <h3 className="text-lg font-bold mb-2">Directorios</h3>
-                                    <p className="text-sm text-textSec mb-4">Descripción corta y larga optimizadas para listados.</p>
+                                    <h3 className="text-lg font-bold mb-2">{t('Directorios', 'Directories')}</h3>
+                                    <p className="text-sm text-textSec mb-4">{t('Descripción corta y larga optimizadas para listados.', 'Short and long descriptions optimized for listings.')}</p>
                                     <div className="text-xs font-medium text-accent flex items-center gap-1">
-                                        {project.launchKit.directories.status === ContentStatus.PENDING ? 'Generar' : 'Ver y Copiar'} <ArrowRight className="w-3 h-3" />
+                                        {project.launchKit.directories.status === ContentStatus.PENDING ? t('Generar', 'Generate') : t('Ver y Copiar', 'View and Copy')} <ArrowRight className="w-3 h-3" />
                                     </div>
                                 </div>
                             </div>

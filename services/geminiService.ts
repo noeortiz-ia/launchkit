@@ -19,6 +19,22 @@ export const translateAIError = (error: any): string => {
     return "❌ Error en el servicio de IA. Por favor, intenta de nuevo.";
 };
 
+// Robust JSON Extraction
+const extractJSON = (text: string): string => {
+    try {
+        // Try to find the first '{' and the last '}'
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            return text.substring(firstBrace, lastBrace + 1);
+        }
+        return text;
+    } catch (e) {
+        return text;
+    }
+};
+
 // OpenRouter Helper
 const callOpenRouter = async (messages: any[], apiKey: string, model: string, jsonMode: boolean = false) => {
     if (!apiKey) throw new Error("Missing OpenRouter API Key in configuration");
@@ -26,7 +42,7 @@ const callOpenRouter = async (messages: any[], apiKey: string, model: string, js
     const body: any = {
         model,
         messages,
-        site_url: "http://localhost:5173", // Optional for OpenRouter rankings
+        site_url: "https://launchkit-jade.vercel.app", // Updated site URL
         site_name: "LaunchKit",
     };
     if (jsonMode) {
@@ -38,7 +54,7 @@ const callOpenRouter = async (messages: any[], apiKey: string, model: string, js
         headers: {
             "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:5173", // Required for free tier sometimes
+            "HTTP-Referer": "https://launchkit-jade.vercel.app",
             "X-Title": "LaunchKit"
         },
         body: JSON.stringify(body)
@@ -53,26 +69,28 @@ const callOpenRouter = async (messages: any[], apiKey: string, model: string, js
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content || "";
     
-    // Cleanup markdown if strictly needing JSON
+    // Cleanup markdown and extract JSON if strictly needing JSON
     if (jsonMode) {
         content = content.replace(/```json\n?|```/g, "").trim();
+        content = extractJSON(content);
     }
     return content;
 }
 
 // 1. Extract PRD
-export const extractPRD = async (prdText: string, config: AIConfig) => {
-  const prompt = `Analiza el siguiente texto (PRD o descripción de producto) y extrae la información estructurada en JSON.
-  Responde SIEMPRE en español.
-  Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
+export const extractPRD = async (prdText: string, config: AIConfig, language: string = 'es') => {
+  const isEn = language === 'en';
+  const prompt = `Analyze the following text (PRD or product description) and extract structured information in JSON.
+  Response language: ${isEn ? 'English' : 'Spanish'}.
+  Respond ONLY with a valid JSON object with this structure:
   {
-      "name": "Nombre del producto",
-      "description": "Descripción corta",
-      "targetAudience": "Público objetivo",
-      "problemSolved": "Problema que resuelve"
+      "name": "Product name",
+      "description": "Short description",
+      "targetAudience": "Target audience",
+      "problemSolved": "Problem solved"
   }
   
-  Texto: "${prdText}"`;
+  Text: "${prdText}"`;
 
   try {
     const jsonStr = await callOpenRouter([{ role: "user", content: prompt }], config.apiKey, config.textModel, true);
@@ -84,46 +102,48 @@ export const extractPRD = async (prdText: string, config: AIConfig) => {
 };
 
 // 2. Generate Monthly Plan with Grounding & Thinking
-export const generateMonthlyPlan = async (project: Project, useSearch: boolean = true, config: AIConfig): Promise<ContentItem[]> => {
+export const generateMonthlyPlan = async (project: Project, useSearch: boolean = true, config: AIConfig, language: string = 'es'): Promise<ContentItem[]> => {
   const model = useSearch ? "google/gemini-3.1-pro-preview" : config.textModel;
+  const isEn = language === 'en';
   
-  const prompt = `Actúa como LaunchKit, un estratega de contenido experto. Genera un plan de contenido mensual (4 semanas) para el siguiente producto:
+  const prompt = `Act as LaunchKit, an expert content strategist. Generate a monthly content plan (4 weeks) for the following product:
   
-  Nombre: ${project.name}
-  Descripción: ${project.description}
-  Audiencia: ${project.targetAudience}
-  Problema que resuelve: ${project.problemSolved}
+  Name: ${project.name}
+  Description: ${project.description}
+  Audience: ${project.targetAudience}
+  Problem solved: ${project.problemSolved}
 
-  ${useSearch ? 'Usa tus capacidades de búsqueda web para encontrar tendencias ACTUALES que sean relevantes para este producto o su industria. Si encuentras una tendencia relevante, marca el contenido como "isTrend": true e incluye el contexto en "trendContext".' : 'NO busques noticias recientes. Céntrate en pilares de contenido sólidos y estratégicos (Evergreen).'}
+  ${useSearch ? 'Use your web search capabilities to find CURRENT trends relevant to this product or its industry. If you find a relevant trend, mark the content as "isTrend": true and include context in "trendContext".' : 'DO NOT search for recent news. Focus on solid and strategic content pillars (Evergreen).'}
   
-  Estructura del plan (4 semanas, EXACTAMENTE 5 ideas por semana):
-  - Semana 1 (5 ideas variadas)
-  - Semana 2 (5 ideas variadas)
-  - Semana 3 (5 ideas variadas)
-  - Semana 4 (5 ideas variadas)
+  Plan structure (4 weeks, EXACTLY 5 ideas per week):
+  - Week 1 (5 varied ideas)
+  - Week 2 (5 varied ideas)
+  - Week 3 (5 varied ideas)
+  - Week 4 (5 varied ideas)
 
-  Genera un total de 20 items. 
+  Generate a total of 20 items. 
   
-  Tipos de contenido permitidos ÚNICAMENTE:
+  Allowed content types ONLY:
   - "Post X"
   - "Post LinkedIn"
   - "Post Instagram"
   - "Email"
   
-  REGLAS DE DISTRIBUCIÓN (IMPORTANTE):
-  1. MEZCLA los tipos de contenido en TODAS las semanas de forma aleatoria y equilibrada.
-  2. NO crees semanas temáticas ni sigas fases.
-  3. Cada semana DEBE tener una mezcla de los 4 tipos.
+  DISTRIBUTION RULES (IMPORTANT):
+  1. MIX content types in ALL weeks in a balanced and random way.
+  2. DO NOT create thematic weeks or follow phases.
+  3. Each week MUST have a mix of the 4 types.
   
-  IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido que contenga una clave "plan" con el array de 20 objetos. Todo en español.
-  Cada objeto del array debe tener:
+  IMPORTANT: Respond ONLY with a valid JSON object containing a "plan" key with the array of 20 objects. 
+  Everything MUST be written in ${isEn ? 'ENGLISH' : 'SPANISH'}.
+  Each object in the array must have:
   {
-    "week": "Semana 1" | "Semana 2" | "Semana 3" | "Semana 4",
+    "week": "WEEK_1" | "WEEK_2" | "WEEK_3" | "WEEK_4",
     "contentType": "Post X" | "Post LinkedIn" | "Post Instagram" | "Email",
-    "title": "Título corto (max 10 palabras)",
-    "angle": "El ángulo o enfoque del contenido",
+    "title": "Short title (max 10 words)",
+    "angle": "The content's angle or focus",
     "isTrend": boolean,
-    "trendContext": "Contexto de la tendencia si existe"
+    "trendContext": "Context of the trend if it exists"
   }`;
 
   try {
@@ -140,10 +160,10 @@ export const generateMonthlyPlan = async (project: Project, useSearch: boolean =
     }
 
     return rawItems.map((item: any) => ({
-      week: item.week || "Semana 1",
+      week: item.week || "WEEK_1",
       contentType: item.contentType || "Post X",
-      title: item.title || "Sin título",
-      angle: item.angle || "Sin enfoque",
+      title: item.title || (isEn ? "No title" : "Sin título"),
+      angle: item.angle || (isEn ? "No focus" : "Sin enfoque"),
       isTrend: !!item.isTrend,
       trendContext: item.trendContext || "",
       id: crypto.randomUUID(),
@@ -156,21 +176,23 @@ export const generateMonthlyPlan = async (project: Project, useSearch: boolean =
 };
 
 // 2.5 Generate Single Idea (OpenRouter)
-export const generateSingleIdea = async (project: Project, week: WeekPhase, config: AIConfig): Promise<ContentItem> => {
-    const prompt = `Genera UNA (1) idea de contenido de marketing creativa y única para la: "${week}".
+export const generateSingleIdea = async (project: Project, week: WeekPhase, config: AIConfig, language: string = 'es'): Promise<ContentItem> => {
+    const isEn = language === 'en';
+    const prompt = `Generate ONE (1) creative and unique marketing content idea for: "${week}".
     
-    Producto: ${project.name}
-    Descripción: ${project.description}
+    Product: ${project.name}
+    Description: ${project.description}
     Target: ${project.targetAudience}
   
-    Tipos permitidos: "Post X", "Post LinkedIn", "Post Instagram", "Email".
-    Selecciona uno aleatoriamente.
+    Allowed types: "Post X", "Post LinkedIn", "Post Instagram", "Email".
+    Select one randomly.
 
-    Responde ÚNICAMENTE con un JSON válido con esta estructura:
+    Everything MUST be written in ${isEn ? 'ENGLISH' : 'SPANISH'}.
+    Respond ONLY with a valid JSON with this structure:
     {
-        "contentType": "Tipo seleccionado",
-        "title": "Título corto",
-        "angle": "Explicación del ángulo",
+        "contentType": "Selected type",
+        "title": "Short title",
+        "angle": "Angle explanation",
         "isTrend": false,
         "trendContext": ""
     }`;
@@ -191,43 +213,45 @@ export const generateSingleIdea = async (project: Project, week: WeekPhase, conf
   };
 
 // 3. Generate Copy (OpenRouter)
-export const generateCopy = async (item: ContentItem, project: Project, config: AIConfig) => {
-  const prompt = `Genera el texto FINAL listo para publicar para este contenido de marketing.
+export const generateCopy = async (item: ContentItem, project: Project, config: AIConfig, language: string = 'es') => {
+  const isEn = language === 'en';
+  const prompt = `Generate the FINAL copy ready to publish for this marketing content.
   
-  Producto: ${project.name}
-  Descripción: ${project.description}
+  Product: ${project.name}
+  Description: ${project.description}
   Target: ${project.targetAudience}
   
-  Detalles del contenido:
-  Tipo: ${item.contentType}
-  Título/Idea: ${item.title}
-  Ángulo: ${item.angle}
-  ${item.isTrend ? `Conectado a tendencia: ${item.trendContext}` : ''}
+  Content details:
+  Type: ${item.contentType}
+  Title/Idea: ${item.title}
+  Angle: ${item.angle}
+  ${item.isTrend ? `Connected to trend: ${item.trendContext}` : ''}
   
-  REGLAS:
-  1. SOLO devuelve el texto del contenido. 
-  2. PROHIBIDO usar Markdown. 
-  3. NO incluyas introducciones.
-  4. Si es Email: Primera línea el Asunto, salta dos líneas, y luego el cuerpo.
-  5. Escribe en Español. Tono profesional pero cercano.`;
+  RULES:
+  1. ONLY return the content text. 
+  2. Markdown is PROHIBITED. 
+  3. DO NOT include introductions.
+  4. If Email: First line is the Subject, skip two lines, then the body.
+  5. Write in ${isEn ? 'ENGLISH' : 'SPANISH'}. Tone: professional but friendly.`;
 
   return await callOpenRouter([{ role: "user", content: prompt }], config.apiKey, config.textModel, false);
 };
 
 // 4. Refine Copy (OpenRouter)
-export const refineCopy = async (currentCopy: string, instruction: string, config: AIConfig) => {
-  const prompt = `Reescribe el siguiente texto aplicando la instrucción dada.
+export const refineCopy = async (currentCopy: string, instruction: string, config: AIConfig, language: string = 'es') => {
+  const isEn = language === 'en';
+  const prompt = `Rewrite the following text applying the given instruction.
   
-  Texto original:
+  Original text:
   "${currentCopy}"
   
-  Instrucción:
+  Instruction:
   "${instruction}"
   
-  REGLAS:
-  1. Devuelve SOLAMENTE el texto reescrito en español.
-  2. PROHIBIDO usar Markdown.
-  3. Sin explicaciones.`;
+  RULES:
+  1. Return ONLY the rewritten text in ${isEn ? 'ENGLISH' : 'SPANISH'}.
+  2. Markdown is PROHIBITED.
+  3. No explanations.`;
 
   return await callOpenRouter([{ role: "user", content: prompt }], config.apiKey, config.textModel, false);
 };
@@ -251,7 +275,7 @@ export const generateImage = async (item: ContentItem, project: Project, aspectR
         headers: {
           "Authorization": `Bearer ${API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "http://localhost:5173",
+          "HTTP-Referer": "https://launchkit-jade.vercel.app",
           "X-Title": "LaunchKit"
         },
         body: JSON.stringify({
@@ -295,28 +319,30 @@ export const generateImage = async (item: ContentItem, project: Project, aspectR
 
 // === LAUNCH KIT GENERATION ===
 
-const getLaunchKitPrompt = (type: LaunchKitType, project: Project) => {
-    const baseInfo = `Producto: ${project.name}. Descripción: ${project.description}. Target: ${project.targetAudience}.`;
+const getLaunchKitPrompt = (type: LaunchKitType, project: Project, language: string = 'es') => {
+    const isEn = language === 'en';
+    const baseInfo = `Product: ${project.name}. Description: ${project.description}. Target: ${project.targetAudience}.`;
+    const langNote = `Respond in ${isEn ? 'ENGLISH' : 'SPANISH'}.`;
     
     switch (type) {
         case 'emails':
-            return `Genera 3 emails de marketing para el lanzamiento. ${baseInfo}
-            Escribe asunto y cuerpo.
-            Responde ÚNICAMENTE con JSON:
-            { "teaser": "texto", "lanzamiento": "texto", "recordatorio": "texto" }`;
+            return `Generate 3 marketing emails for launch. ${baseInfo}
+            Write subject and body. ${langNote}
+            Respond ONLY with JSON (DO NOT translate keys):
+            { "teaser": "text", "lanzamiento": "text", "recordatorio": "text" }`;
         case 'productHunt':
-            return `Genera textos para Product Hunt. ${baseInfo}
-            Responde ÚNICAMENTE con JSON:
-            { "tagline": "texto max 60 chars", "descripcion": "texto intro", "primerComentario": "texto comentario" }`;
+            return `Generate Product Hunt copy. ${baseInfo} ${langNote}
+            Respond ONLY with JSON (DO NOT translate keys):
+            { "tagline": "text max 60 chars", "descripcion": "intro text", "primerComentario": "comment text" }`;
         case 'directories':
-            return `Genera descripciones para directorios. ${baseInfo}
-            Responde ÚNICAMENTE con JSON:
-            { "descripcionCorta": "texto", "descripcionLarga": "texto" }`;
+            return `Generate directory descriptions. ${baseInfo} ${langNote}
+            Respond ONLY with JSON (DO NOT translate keys):
+            { "descripcionCorta": "text", "descripcionLarga": "text" }`;
     }
 };
 
-export const generateLaunchKitContent = async (type: LaunchKitType, project: Project, config: AIConfig) => {
-    const prompt = getLaunchKitPrompt(type, project);
+export const generateLaunchKitContent = async (type: LaunchKitType, project: Project, config: AIConfig, language: string = 'es') => {
+    const prompt = getLaunchKitPrompt(type, project, language);
     try {
         const jsonStr = await callOpenRouter([{ role: "user", content: prompt }], config.apiKey, config.textModel, true);
         return JSON.parse(jsonStr || "{}");
@@ -326,13 +352,15 @@ export const generateLaunchKitContent = async (type: LaunchKitType, project: Pro
     }
 };
 
-export const refineLaunchKitContent = async (type: LaunchKitType, currentContent: any, instruction: string, config: AIConfig) => {
-    const prompt = `Reescribe los siguientes textos aplicando esta instrucción: "${instruction}".
+export const refineLaunchKitContent = async (type: LaunchKitType, currentContent: any, instruction: string, config: AIConfig, language: string = 'es') => {
+    const isEn = language === 'en';
+    const prompt = `Rewrite the following texts applying this instruction: "${instruction}".
+    Respond in ${isEn ? 'ENGLISH' : 'SPANISH'}.
     
-    Contenido actual:
+    Current content:
     ${JSON.stringify(currentContent)}
     
-    Mantén la estructura JSON exacta. Solo modifica los textos.`;
+    Keep the exact JSON structure. Only modify the values. DO NOT translate the keys.`;
 
     try {
         const jsonStr = await callOpenRouter([{ role: "user", content: prompt }], config.apiKey, config.textModel, true);

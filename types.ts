@@ -5,10 +5,10 @@ export enum ContentStatus {
 }
 
 export enum WeekPhase {
-  WEEK_1 = 'Semana 1',
-  WEEK_2 = 'Semana 2',
-  WEEK_3 = 'Semana 3',
-  WEEK_4 = 'Semana 4'
+  WEEK_1 = 'WEEK_1',
+  WEEK_2 = 'WEEK_2',
+  WEEK_3 = 'WEEK_3',
+  WEEK_4 = 'WEEK_4'
 }
 
 export interface ContentItem {
