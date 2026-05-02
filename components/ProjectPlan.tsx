@@ -66,17 +66,21 @@ const ProjectPlan: React.FC = () => {
       ...rawProject,
       id: rawProject._id,
       createdAt: rawProject._creationTime,
-      plan: (rawProject.plan || []).map((item: any) => {
-          const hasImageUrls = item.imageUrls && item.imageUrls.length > 0;
+      plan: (rawProject.plan || []).map((item: any, idx: number) => {
+          const id = item.id || `plan-${idx}`;
+          const hasImageUrls = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0;
           return {
               ...item,
+              id,
               imageUrls: hasImageUrls ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : [])
           };
       }) as ContentItem[],
-      savedItems: (rawProject.savedItems || []).map((item: any) => {
-          const hasImageUrls = item.imageUrls && item.imageUrls.length > 0;
+      savedItems: (rawProject.savedItems || []).map((item: any, idx: number) => {
+          const id = item.id || `saved-${idx}`;
+          const hasImageUrls = item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0;
           return {
               ...item,
+              id,
               imageUrls: hasImageUrls ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : [])
           };
       }) as ContentItem[],
