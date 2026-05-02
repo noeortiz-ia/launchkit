@@ -51,8 +51,8 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
     }
   };
 
-  const currentData = project.launchKit[type];
-  const content = currentData.content as Record<string, string>;
+  const currentData = project.launchKit[type] || { status: ContentStatus.PENDING, content: {} };
+  const content = (currentData.content || {}) as Record<string, any>;
   const keys = Object.keys(content);
 
   const handleGenerate = async () => {
@@ -187,7 +187,7 @@ const LaunchKitModal: React.FC<LaunchKitModalProps> = ({ type, isOpen, onClose, 
                                 </button>
                             </div>
                             <div className="p-5 text-sm text-textMain whitespace-pre-wrap leading-relaxed">
-                                {content[key]}
+                                {typeof content[key] === 'string' ? content[key] : JSON.stringify(content[key], null, 2)}
                             </div>
                         </div>
                     ))}
