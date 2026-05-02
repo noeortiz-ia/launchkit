@@ -183,7 +183,11 @@ const ProjectPlan: React.FC = () => {
         console.error(e);
         alert(t('Error generando nueva idea.', 'Error generating new idea.'));
     } finally {
-        setLoadingWeekId(null);  const handleDeleteItem = (itemId: string, isSavedItem: boolean = false) => {
+        setLoadingWeekId(null);
+    }
+  };
+
+  const handleDeleteItem = (itemId: string, isSavedItem: boolean = false) => {
     if (!project) return;
     if (window.confirm(t("¿Estás seguro de que quieres eliminar esta idea?", "Are you sure you want to delete this idea?"))) {
         let updatedProject: Project;
