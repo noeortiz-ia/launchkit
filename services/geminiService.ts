@@ -257,14 +257,42 @@ export const refineCopy = async (currentCopy: string, instruction: string, confi
 };
 
 // 5. Generate Image (OpenRouter Flux 2)
-export const generateImage = async (item: ContentItem, project: Project, aspectRatio: string, config: AIConfig, language: string = 'es') => {
-  const isEn = language === 'en';
-  const prompt = `Attractive marketing image for a project named "${project.name}". 
-  Context: ${item.title}. Angle: ${item.angle}. 
-  ${isEn ? 'All text in the image must be in ENGLISH.' : 'Cualquier texto dentro de la imagen debe estar en ESPAÑOL.'}
-  Aspect Ratio: ${aspectRatio}`; 
+export const generateImage = async (
+    item: ContentItem, 
+    project: Project, 
+    aspectRatio: string = "1:1",
+    config: AIConfig,
+    language: string = 'es',
+    options?: { includeText?: boolean; slideIndex?: number }
+) => {
+    const isEn = language === 'en';
+    
+    // Determine context for slides if it's a carousel
+    let slideContext = "";
+    if (options?.slideIndex !== undefined && item.copy) {
+        const slideNum = options.slideIndex + 1;
+        // Search for SLIDE X: or DIAPOSITIVA X: or Slide X:
+        const slideRegex = new RegExp(`(?:SLIDE|DIAPOSITIVA)\\s*${slideNum}:?\\s*([\\s\\S]*?)(?=(?:SLIDE|DIAPOSITIVA)\\s*${slideNum + 1}|POST CAPTION|$)`, 'i');
+        const match = item.copy.match(slideRegex);
+        if (match && match[1]) {
+            slideContext = `THIS IMAGE IS SPECIFICALLY FOR SLIDE #${slideNum}. Focus on this content: "${match[1].trim()}". `;
+        }
+    }
 
-  const API_KEY = config.apiKey;
+    const prompt = `Attractive and premium social media marketing image.
+Product: "${project.name}"
+Title: ${item.title}
+Angle: ${item.angle}
+${slideContext ? `SPECIFIC SLIDE CONTENT: ${slideContext}` : `Full Post Context: ${item.copy}`}
+
+Instructions:
+- Style: Modern, clean, professional, high-density.
+- Target: ${project.targetAudience}
+- Aspect Ratio: ${aspectRatio}
+${options?.includeText === false ? "- IMPORTANT: DO NOT include any text, letters, or words in the image. Pure visual representation only." : `- Any text in the image must be in ${isEn ? 'ENGLISH' : 'SPANISH'}.`}
+- Use vibrant but professional colors. Avoid generic stock photos.`;
+
+    const API_KEY = config.apiKey;
   if (!API_KEY) {
       console.error("Missing OpenRouter API Key");
       return null;

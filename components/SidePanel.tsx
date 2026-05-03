@@ -23,6 +23,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
   const [refineInput, setRefineInput] = useState('');
   const [copied, setCopied] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('16:9');
+  const [includeText, setIncludeText] = useState(true);
 
   const { language: uiLanguage, t } = useLanguage();
   const [imageLanguage, setImageLanguage] = useState<string>(uiLanguage);
@@ -110,8 +111,22 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
     }
     setLoadingImage(true);
     try {
+      // Determine slide index for carousel awareness
+      const currentGallery = [...(item.imageUrls || [])];
+      if (item.imageUrl && !currentGallery.includes(item.imageUrl)) {
+          currentGallery.push(item.imageUrl);
+      }
+      const slideIndex = currentGallery.length;
+
       // Use current UI language for the image prompt
-      const base64Image = await generateImage(item, project, aspectRatio, { apiKey, textModel, imageModel }, imageLanguage);
+      const base64Image = await generateImage(
+          item, 
+          project, 
+          aspectRatio, 
+          { apiKey, textModel, imageModel }, 
+          imageLanguage,
+          { includeText, slideIndex }
+      );
       
       if (base64Image) {
         const uploadUrl = await generateUploadUrl();
@@ -401,6 +416,18 @@ const SidePanel: React.FC<SidePanelProps> = ({ item, project, isOpen, onClose, o
                                       EN
                                   </button>
                               </div>
+                          </div>
+                          <div>
+                              <label className="block text-[10px] font-semibold text-textSec uppercase mb-2">{t('Texto', 'Text')}</label>
+                              <button 
+                                  onClick={() => setIncludeText(!includeText)}
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${includeText ? 'bg-surface border-border text-textSec' : 'bg-accent/10 border-accent/30 text-accent'}`}
+                              >
+                                  <div className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-all ${includeText ? 'bg-accent border-accent' : 'bg-transparent border-textSec'}`}>
+                                      {includeText && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                                  </div>
+                                  <span className="text-[10px] font-bold whitespace-nowrap">{includeText ? t('Con Texto', 'With Text') : t('Sin Texto', 'No Text')}</span>
+                              </button>
                           </div>
                       </div>
                       
