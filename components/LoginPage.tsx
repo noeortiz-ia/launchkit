@@ -80,18 +80,10 @@ const LoginPage: React.FC = () => {
                     </div>
                 )}
 
-                <div className="text-center pt-4 border-t border-[#262626]">
-                    <p className="text-[#525252] text-xs uppercase tracking-wider font-semibold mb-2">
-                        {t('Acceso Exclusivo', 'Exclusive Access')}
+                <div className="pt-4 border-t border-[#262626]">
+                    <p className="text-[#525252] text-xs uppercase tracking-wider font-semibold">
+                        LaunchKit Beta
                     </p>
-                    <a 
-                        href="https://www.skool.com/vibe-coding-crea-apps-con-ia-5930" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-400 text-sm font-medium inline-flex items-center gap-1 transition-colors"
-                    >
-                        {t('¿No eres miembro? Únete a la academia', 'Not a member? Join the academy')} <ExternalLink className="w-3 h-3" />
-                    </a>
                 </div>
             </div>
             

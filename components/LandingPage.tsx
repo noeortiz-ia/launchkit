@@ -53,25 +53,13 @@ const LandingPage: React.FC = () => {
                         >
                             {t('Comenzar ahora', 'Get started now')} <ArrowRight className="w-5 h-5" />
                         </button>
-                        
-                        <div className="text-sm text-[#525252] flex flex-col md:flex-row items-center gap-1 md:gap-2">
-                            <span>{t('Exclusivo para miembros de la academia.', 'Exclusive for academy members.')}</span>
-                            <a 
-                                href="https://www.skool.com/vibe-coding-crea-apps-con-ia-5930" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-[#a3a3a3] hover:text-blue-400 inline-flex items-center gap-1 transition-colors border-b border-[#a3a3a3]/30 hover:border-blue-400"
-                            >
-                                {t('Únete acá', 'Join here')} <ExternalLink className="w-3 h-3" />
-                            </a>
-                        </div>
                     </div>
                 </div>
             </main>
 
             {/* Footer */}
             <footer className="py-8 text-center text-xs text-[#404040] relative z-10">
-                <p>{t('LaunchKit Beta · Hecho por Rodrigo Olivares · Exclusivo para miembros', 'LaunchKit Beta · Built by Rodrigo Olivares · Exclusive for members')}</p>
+                <p>{t('LaunchKit Beta · Todos los derechos reservados', 'LaunchKit Beta · All rights reserved')}</p>
             </footer>
         </div>
     );
